@@ -48,7 +48,15 @@ export function AdminComfyUIPage() {
   const [parseError, setParseError] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string>('');
+  const [testResult, setTestResult] = useState<'connected' | 'failed' | ''>('');
+  const [testError, setTestError] = useState('');
+  const [connectionInfo, setConnectionInfo] = useState<{
+    providerType: string;
+    endpoint: string;
+    version?: string;
+    availableModels?: string[];
+    raw?: Record<string, unknown>;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -105,6 +113,71 @@ export function AdminComfyUIPage() {
     setWorkflowJson(json);
   };
 
+  const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+
+  const detectConnection = async (url: string, providerType?: string) => {
+    const endpoint = normalizeUrl(url);
+    const info = {
+      providerType: providerType ?? 'Unknown',
+      endpoint,
+      version: undefined as string | undefined,
+      availableModels: undefined as string[] | undefined,
+      raw: undefined as Record<string, unknown> | undefined,
+    };
+
+    const probe = async (path: string) => {
+      const response = await fetch(`${endpoint}${path}`, { method: 'GET' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const json = (await response.json()) as Record<string, unknown>;
+      return { path, json };
+    };
+
+    const tryPaths = async (paths: string[]) => {
+      for (const path of paths) {
+        try {
+          const result = await probe(path);
+          return result;
+        } catch {
+          // ignore and continue
+        }
+      }
+      throw new Error('No supported endpoint responded');
+    };
+
+    try {
+      const knownType = providerType === 'comfyui' ? 'ComfyUI' : providerType === 'openai' ? 'OpenAI-compatible' : providerType === 'openrouter' ? 'OpenRouter' : 'Generic';
+      info.providerType = knownType;
+
+      if (providerType === 'comfyui') {
+        const { json } = await tryPaths(['/api/version', '/api/info', '/api/health']);
+        info.version = (json.version as string) ?? (json.server as string) ?? undefined;
+        info.raw = json;
+      } else if (providerType === 'openai' || providerType === 'openrouter') {
+        const { json } = await tryPaths(['/v1/models', '/openapi.json']);
+        info.availableModels = Array.isArray(json.data)
+          ? json.data.map((item) => String((item as any).id ?? (item as any).name ?? 'unknown'))
+          : undefined;
+        info.raw = json;
+      } else {
+        const { path, json } = await tryPaths(['/api/version', '/api/info', '/api/health', '/v1/models', '/openapi.json']);
+        info.raw = json;
+        if (path.startsWith('/api')) {
+          info.providerType = 'ComfyUI-compatible';
+          info.version = (json.version as string) ?? (json.server as string) ?? undefined;
+        } else if (path.startsWith('/v1') || path === '/openapi.json') {
+          info.providerType = 'OpenAI-compatible';
+          info.availableModels = Array.isArray(json.data)
+            ? json.data.map((item) => String((item as any).id ?? (item as any).name ?? 'unknown'))
+            : undefined;
+        }
+      }
+    } catch (err) {
+      throw err;
+    }
+
+    return info;
+  };
+
   const handleFileUpload = async (file: File) => {
     try {
       const text = await file.text();
@@ -147,16 +220,34 @@ export function AdminComfyUIPage() {
     if (!serverUrl) return;
     setTesting(true);
     setTestResult('');
-    await new Promise((r) => setTimeout(r, 1000));
-    const success = Math.random() > 0.25;
-    setTestResult(success ? 'connected' : 'failed');
-    setTesting(false);
-    await supabase.from('system_logs').insert({
-      log_type: 'connection',
-      message: `ComfyUI connection test to ${serverUrl}: ${success ? 'SUCCESS' : 'FAILED'}`,
-      level: success ? 'info' : 'error',
-      details: { server_url: serverUrl },
-    });
+    setTestError('');
+    setConnectionInfo(null);
+
+    const providerType = providers.find((p) => p.id === selectedProvider)?.provider_type;
+
+    try {
+      const info = await detectConnection(serverUrl, providerType);
+      setConnectionInfo(info);
+      setTestResult('connected');
+      await supabase.from('system_logs').insert({
+        log_type: 'connection',
+        message: `Connection test to ${serverUrl}: SUCCESS`,
+        level: 'info',
+        details: { server_url: serverUrl, provider_type: providerType, info },
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      setTestResult('failed');
+      setTestError(msg);
+      await supabase.from('system_logs').insert({
+        log_type: 'connection',
+        message: `ComfyUI connection test to ${serverUrl}: FAILED`,
+        level: 'error',
+        details: { server_url: serverUrl, provider_type: providerType, error: msg },
+      });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleDeleteWorkflow = async (id: string) => {
@@ -225,13 +316,49 @@ export function AdminComfyUIPage() {
                 </AdminButton>
               </div>
               {testResult === 'connected' && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-success">
-                  <Check className="h-3.5 w-3.5" /> Connected successfully
+                <div className="space-y-2">
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-success">
+                    <Check className="h-3.5 w-3.5" /> Connected successfully
+                  </div>
+                  {connectionInfo && (
+                    <div className="rounded-xl border border-success/30 bg-success/5 p-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Detected:</span>
+                        <span>{connectionInfo.providerType}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="font-semibold">Endpoint:</span>
+                        <span className="truncate">{connectionInfo.endpoint}</span>
+                      </div>
+                      {connectionInfo.version && (
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-semibold">Version:</span>
+                          <span>{connectionInfo.version}</span>
+                        </div>
+                      )}
+                      {connectionInfo.availableModels && connectionInfo.availableModels.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <span className="font-semibold">Models:</span>
+                          {connectionInfo.availableModels.slice(0, 5).map((model) => (
+                            <span key={model} className="rounded-full bg-success/20 px-2 py-0.5 text-[10px]">
+                              {model}
+                            </span>
+                          ))}
+                          {connectionInfo.availableModels.length > 5 && (
+                            <span className="text-muted-foreground">+{connectionInfo.availableModels.length - 5} more</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               {testResult === 'failed' && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-destructive">
-                  <AlertCircle className="h-3.5 w-3.5" /> Connection failed
+                <div className="mt-2 space-y-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-destructive">
+                    <AlertCircle className="h-3.5 w-3.5" /> Connection failed
+                  </div>
+                  {testError && <div className="text-destructive/80">{testError}</div>}
                 </div>
               )}
             </div>

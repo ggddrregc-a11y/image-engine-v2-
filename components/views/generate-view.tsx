@@ -55,6 +55,7 @@ export function GenerateView() {
     batchCount,
     setBatchCount,
   } = useApp();
+  const [quality, setQuality] = useState<'standard' | 'high'>('standard');
 
   const [showNegative, setShowNegative] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -87,9 +88,10 @@ export function GenerateView() {
     return () => clearInterval(interval);
   }, [jobs]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim() || jobs.some((j) => j.status === 'running' || j.status === 'queued'))
       return;
+
     const nodes = ['Load Model', 'Encode Prompt', 'Sample', 'Decode Latent', 'Upscale', 'VAE Decode'];
     const newJob: GenerationJob = {
       id: `job-${Date.now()}`,
@@ -101,7 +103,35 @@ export function GenerateView() {
       startedAt: new Date().toISOString(),
       etaSeconds: 14,
     };
+
     setJobs((prev) => [newJob, ...prev].slice(0, 3));
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          negativePrompt,
+          model: selectedModel,
+          width: currentRatio.w,
+          height: currentRatio.h,
+          steps,
+          cfgScale,
+          sampler,
+          batchCount,
+          quality,
+          workflowId: undefined,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Generation request failed');
+      }
+    } catch (error) {
+      console.error(error);
+    }
 
     // Cycle nodes for visual effect
     let ni = 0;
@@ -369,6 +399,36 @@ export function GenerateView() {
                       onChange={(e) => setSteps(Number(e.target.value))}
                       className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
                     />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Quality
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setQuality('standard')}
+                        className={cn(
+                          'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                          quality === 'standard'
+                            ? 'border-primary/40 bg-primary/10 text-primary'
+                            : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                        )}
+                      >
+                        Standard
+                      </button>
+                      <button
+                        onClick={() => setQuality('high')}
+                        className={cn(
+                          'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                          quality === 'high'
+                            ? 'border-primary/40 bg-primary/10 text-primary'
+                            : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                        )}
+                      >
+                        HD
+                      </button>
+                    </div>
                   </div>
 
                   {/* CFG Scale */}

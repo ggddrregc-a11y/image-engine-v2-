@@ -96,31 +96,112 @@ export function AdminProvidersPage() {
     fetchProviders();
   };
 
-  const handleTest = async (p: AIProvider) => {
-    setTesting(p.id);
-    // Simulate connection test
-    await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
-    const result: ConnectionTestResult = {
-      success: Math.random() > 0.2,
-      latencyMs: Math.round(20 + Math.random() * 200),
-      authStatus: 'authenticated',
-      version: 'v1.2.0',
-      availableModels: ['lumen-xl-v2.1', 'dreamshaper-v8', 'anything-v5'],
+  const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+
+  const probeConnection = async (endpoint: string, paths: string[]) => {
+    const start = Date.now();
+    for (const path of paths) {
+      try {
+        const response = await fetch(`${endpoint}${path}`, { method: 'GET' });
+        if (!response.ok) continue;
+        const json = (await response.json()) as Record<string, unknown>;
+        return {
+          path,
+          json,
+          latencyMs: Date.now() - start,
+        };
+      } catch {
+        continue;
+      }
+    }
+    throw new Error('No supported endpoint responded');
+  };
+
+  const detectProviderConnection = async (p: AIProvider) => {
+    const workflowResponse = await supabase
+      .from('comfyui_workflows')
+      .select('server_url')
+      .eq('provider_id', p.id)
+      .limit(1)
+      .single();
+
+    if (workflowResponse.error || !workflowResponse.data?.server_url) {
+      throw new Error('No configured workflow found for this provider. Configure ComfyUI workflow first.');
+    }
+
+    const endpoint = normalizeUrl(workflowResponse.data.server_url);
+    let result: ConnectionTestResult = {
+      success: false,
+      latencyMs: 0,
+      authStatus: 'not_required',
+      version: undefined,
+      availableModels: undefined,
       error: undefined,
     };
-    if (!result.success) {
-      result.authStatus = 'failed';
-      result.error = 'Connection refused: server unreachable';
+
+    if (p.provider_type === 'comfyui') {
+      const probes = await probeConnection(endpoint, ['/api/version', '/api/info', '/api/health']);
+      result = {
+        success: true,
+        latencyMs: probes.latencyMs,
+        authStatus: 'not_required',
+        version: (probes.json.version as string) ?? (probes.json.server as string) ?? 'unknown',
+        availableModels: undefined,
+      };
+    } else if (p.provider_type === 'openai') {
+      const probes = await probeConnection(endpoint, ['/v1/models', '/openapi.json']);
+      const models = Array.isArray(probes.json.data)
+        ? probes.json.data.map((item) => String((item as any).id ?? (item as any).name ?? 'unknown'))
+        : undefined;
+      result = {
+        success: true,
+        latencyMs: probes.latencyMs,
+        authStatus: 'not_required',
+        version: models?.[0] ?? 'unknown',
+        availableModels: models,
+      };
+    } else {
+      const probes = await probeConnection(endpoint, ['/api/version', '/api/info', '/api/health', '/v1/models', '/openapi.json']);
+      result = {
+        success: true,
+        latencyMs: probes.latencyMs,
+        authStatus: 'not_required',
+        version: (probes.json.version as string) ?? (probes.json.server as string) ?? 'unknown',
+        availableModels: Array.isArray(probes.json.data)
+          ? probes.json.data.map((item) => String((item as any).id ?? (item as any).name ?? 'unknown'))
+          : undefined,
+      };
     }
+
+    return result;
+  };
+
+  const handleTest = async (p: AIProvider) => {
+    setTesting(p.id);
+    let result: ConnectionTestResult;
+
+    try {
+      result = await detectProviderConnection(p);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Connection failed';
+      result = {
+        success: false,
+        latencyMs: 0,
+        authStatus: 'failed',
+        version: undefined,
+        availableModels: undefined,
+        error: msg,
+      };
+    }
+
     setTestResults((prev) => ({ ...prev, [p.id]: result }));
     setTesting(null);
 
-    // Log the connection test
     await supabase.from('system_logs').insert({
       log_type: 'connection',
       message: `Connection test for ${p.name}: ${result.success ? 'SUCCESS' : 'FAILED'}`,
       level: result.success ? 'info' : 'error',
-      details: { latencyMs: result.latencyMs, provider: p.name },
+      details: { latencyMs: result.latencyMs, provider: p.name, error: result.error },
     });
   };
 

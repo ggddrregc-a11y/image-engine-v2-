@@ -75,7 +75,7 @@ export function AdminLoginPage() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Enter your username"
                 className="h-11 w-full rounded-xl border border-border bg-background/60 px-3 text-sm outline-none transition-all placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -89,7 +89,7 @@ export function AdminLoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   className="h-11 w-full rounded-xl border border-border bg-background/60 px-3 pr-10 text-sm outline-none transition-all placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
                 />
                 <button
@@ -132,11 +132,6 @@ export function AdminLoginPage() {
                 </>
               )}
             </button>
-
-            {/* Hint */}
-            <p className="text-center text-[11px] text-muted-foreground/60">
-              Default: admin / admin123
-            </p>
           </form>
 
           {/* Footer */}
