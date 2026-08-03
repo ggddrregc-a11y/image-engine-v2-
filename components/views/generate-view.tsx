@@ -24,6 +24,7 @@ import {
 import { useApp } from '@/components/providers/app-provider';
 import { PageContainer } from './shared';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import {
   PROMPT_TEMPLATES,
   FAVORITE_PROMPTS,
@@ -33,6 +34,7 @@ import {
   MODELS,
 } from '@/lib/mock-data';
 import type { GenerationJob } from '@/lib/types';
+import type { ComfyUIWorkflow } from '@/lib/admin-types';
 
 const MAX_CHARS = 1000;
 
@@ -56,6 +58,7 @@ export function GenerateView() {
     setBatchCount,
   } = useApp();
   const [quality, setQuality] = useState<'standard' | 'high'>('standard');
+  const [savedWorkflows, setSavedWorkflows] = useState<ComfyUIWorkflow[]>([]);
 
   const [showNegative, setShowNegative] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -63,6 +66,17 @@ export function GenerateView() {
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [recentResults, setRecentResults] = useState(SAMPLE_IMAGES.slice(0, 4));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load saved workflows so their models appear in the UI
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      const { data, error } = await supabase.from('comfyui_workflows').select('*').order('created_at', { ascending: false });
+      if (data) {
+        setSavedWorkflows(data as ComfyUIWorkflow[]);
+      }
+    };
+    fetchWorkflows();
+  }, []);
 
   // Simulate generation progress
   useEffect(() => {
@@ -335,20 +349,37 @@ export function GenerateView() {
                       Model
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {MODELS.filter((m) => m.type === 'checkpoint').map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => setSelectedModel(m.name)}
-                          className={cn(
-                            'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
-                            selectedModel === m.name
-                              ? 'border-primary/40 bg-primary/10 text-primary'
-                              : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
-                          )}
-                        >
-                          {m.name}
-                        </button>
-                      ))}
+                      {savedWorkflows.length > 0 ? (
+                        savedWorkflows.map((workflow) => (
+                          <button
+                            key={workflow.id}
+                            onClick={() => setSelectedModel(workflow.workflow_name)}
+                            className={cn(
+                              'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                              selectedModel === workflow.workflow_name
+                                ? 'border-primary/40 bg-primary/10 text-primary'
+                                : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                            )}
+                          >
+                            {workflow.workflow_name}
+                          </button>
+                        ))
+                      ) : (
+                        MODELS.filter((m) => m.type === 'checkpoint').map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => setSelectedModel(m.name)}
+                            className={cn(
+                              'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                              selectedModel === m.name
+                                ? 'border-primary/40 bg-primary/10 text-primary'
+                                : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                            )}
+                          >
+                            {m.name}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
 
