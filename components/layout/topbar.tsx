@@ -26,26 +26,15 @@ import { useApp } from '@/components/providers/app-provider';
 import { useAdminAuth } from '@/components/providers/admin-auth-provider';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
-
-const WORKSPACES = ['Personal', 'Acme Studio', 'Design Team'];
-
-const PROFILE_MENU = [
-  { icon: User, label: 'My Profile', view: 'settings' as const },
-  { icon: CreditCard, label: 'Billing & Subscription', view: 'settings' as const },
-  { icon: KeyRound, label: 'API Keys', view: 'api' as const },
-  { icon: BellRing, label: 'Notifications', view: 'settings' as const },
-  { icon: Shield, label: 'Security', view: 'settings' as const },
-  { icon: Palette, label: 'Appearance', view: 'settings' as const },
-  { icon: Globe, label: 'Language', view: 'settings' as const },
-] as const;
+import { t } from '@/lib/i18n';
 
 const PROFILE_FOOTER = [
-  { icon: LifeBuoy, label: 'Support' },
-  { icon: BookOpen, label: 'Documentation' },
+  { icon: LifeBuoy, labelKey: 'topbar.support' },
+  { icon: BookOpen, labelKey: 'topbar.documentation' },
 ] as const;
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const { setActiveView } = useApp();
+  const { setActiveView, locale } = useApp();
   const [wsOpen, setWsOpen] = useState(false);
   const [wsIndex, setWsIndex] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -53,6 +42,22 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
   const { theme, setTheme } = useTheme();
   const { logout: adminLogout } = useAdminAuth();
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const WORKSPACES = [
+    t(locale, 'workspace.personal'),
+    t(locale, 'workspace.acme'),
+    t(locale, 'workspace.design'),
+  ];
+
+  const PROFILE_MENU = [
+    { icon: User, label: t(locale, 'profile.myProfile'), view: 'settings' as const },
+    { icon: CreditCard, label: t(locale, 'profile.billing'), view: 'settings' as const },
+    { icon: KeyRound, label: t(locale, 'profile.apiKeys'), view: 'api' as const },
+    { icon: BellRing, label: t(locale, 'profile.notifications'), view: 'settings' as const },
+    { icon: Shield, label: t(locale, 'profile.security'), view: 'settings' as const },
+    { icon: Palette, label: t(locale, 'profile.appearance'), view: 'settings' as const },
+    { icon: Globe, label: t(locale, 'profile.language'), view: 'settings' as const },
+  ] as const;
 
   // Close profile menu on outside click
   useEffect(() => {
@@ -133,11 +138,11 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search prompts, images, models..."
+          placeholder={t(locale, 'topbar.searchPlaceholder')}
           className="h-9 w-full rounded-xl border border-border bg-card/50 pl-9 pr-16 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/40 focus:bg-card"
         />
         <kbd className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground lg:block">
-          ⌘K
+          {t(locale, 'settings.searchShortcut')}
         </kbd>
       </div>
 
@@ -146,7 +151,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <div className="hidden items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2 lg:flex">
           <Zap className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">842</span>
-          <span className="text-xs text-muted-foreground">credits</span>
+          <span className="text-xs text-muted-foreground">{t(locale, 'topbar.credits')}</span>
         </div>
 
         {/* Theme toggle */}
@@ -308,12 +313,12 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
                     const Icon = item.icon;
                     return (
                       <button
-                        key={item.label}
+                        key={item.labelKey}
                         onClick={() => setProfileOpen(false)}
                         className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
                       >
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        {item.label}
+                        {t(locale, item.labelKey)}
                       </button>
                     );
                   })}

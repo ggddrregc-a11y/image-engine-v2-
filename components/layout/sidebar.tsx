@@ -15,22 +15,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/components/providers/app-provider';
+import { t } from '@/lib/i18n';
 import type { ViewId } from '@/lib/types';
 
 const NAV_ITEMS: {
   id: ViewId;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }[] = [
-  { id: 'generate', label: 'Generate', icon: Sparkles },
-  { id: 'gallery', label: 'Gallery', icon: Images },
-  { id: 'history', label: 'History', icon: History },
-  { id: 'collections', label: 'Collections', icon: FolderOpen },
-  { id: 'workflows', label: 'Workflows', icon: Workflow },
-  { id: 'models', label: 'Models', icon: Boxes },
-  { id: 'api', label: 'API', icon: Code2 },
-  { id: 'admin', label: 'Admin', icon: Shield, badge: 'Admin' },
+  { id: 'generate', labelKey: 'sidebar.generate', icon: Sparkles },
+  { id: 'gallery', labelKey: 'sidebar.gallery', icon: Images },
+  { id: 'history', labelKey: 'sidebar.history', icon: History },
+  { id: 'collections', labelKey: 'sidebar.collections', icon: FolderOpen },
+  { id: 'workflows', labelKey: 'sidebar.workflows', icon: Workflow },
+  { id: 'models', labelKey: 'sidebar.models', icon: Boxes },
+  { id: 'api', labelKey: 'sidebar.api', icon: Code2 },
+  { id: 'admin', labelKey: 'sidebar.admin', icon: Shield, badge: 'Admin' },
 ];
 
 export function Sidebar({
@@ -40,7 +41,7 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const { activeView, setActiveView } = useApp();
+  const { activeView, setActiveView, locale } = useApp();
 
   return (
     <aside
@@ -67,7 +68,7 @@ export function Sidebar({
                   ? 'text-foreground'
                   : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? t(locale, item.labelKey) : undefined}
             >
               {active && (
                 <motion.div
@@ -97,7 +98,7 @@ export function Sidebar({
                     exit={{ opacity: 0, x: -8 }}
                     className="relative z-10 flex-1 text-left"
                   >
-                    {item.label}
+                    {t(locale, item.labelKey)}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -122,7 +123,7 @@ export function Sidebar({
               collapsed && 'rotate-180',
             )}
           />
-          {!collapsed && <span>Collapse</span>}
+          {!collapsed && <span>{t(locale, 'sidebar.collapse')}</span>}
         </button>
       </div>
     </aside>

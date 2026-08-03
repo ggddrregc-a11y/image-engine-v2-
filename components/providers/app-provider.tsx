@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ViewId } from '@/lib/types';
+import type { Locale } from '@/lib/i18n';
 
 interface AppContextValue {
   activeView: ViewId;
@@ -24,6 +25,8 @@ interface AppContextValue {
   setBatchCount: (n: number) => void;
   favorites: Set<string>;
   toggleFavorite: (id: string) => void;
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -47,6 +50,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<Set<string>>(
     new Set(['img-1', 'img-3', 'img-6', 'img-9']),
   );
+  const [locale, setLocaleState] = useState<Locale>('en');
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('locale') as Locale | null;
+    if (stored === 'ar' || stored === 'en') {
+      setLocaleState(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('locale', locale);
+  }, [locale]);
+
+  const setLocale = useCallback((locale: Locale) => {
+    setLocaleState(locale);
+  }, []);
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
@@ -80,6 +99,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBatchCount,
         favorites,
         toggleFavorite,
+        locale,
+        setLocale,
       }}
     >
       {children}
