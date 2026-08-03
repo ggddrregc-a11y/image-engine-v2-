@@ -107,7 +107,7 @@ export function GenerateView() {
     setJobs((prev) => [newJob, ...prev].slice(0, 3));
 
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/comfy/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
