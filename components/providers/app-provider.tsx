@@ -1,0 +1,88 @@
+'use client';
+
+import { createContext, useContext, useState, useCallback } from 'react';
+import type { ViewId } from '@/lib/types';
+
+interface AppContextValue {
+  activeView: ViewId;
+  setActiveView: (v: ViewId) => void;
+  prompt: string;
+  setPrompt: (p: string) => void;
+  negativePrompt: string;
+  setNegativePrompt: (p: string) => void;
+  selectedModel: string;
+  setSelectedModel: (m: string) => void;
+  aspectRatio: string;
+  setAspectRatio: (a: string) => void;
+  steps: number;
+  setSteps: (n: number) => void;
+  cfgScale: number;
+  setCfgScale: (n: number) => void;
+  sampler: string;
+  setSampler: (s: string) => void;
+  batchCount: number;
+  setBatchCount: (n: number) => void;
+  favorites: Set<string>;
+  toggleFavorite: (id: string) => void;
+}
+
+const AppContext = createContext<AppContextValue | null>(null);
+
+export function useApp() {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
+}
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [activeView, setActiveView] = useState<ViewId>('generate');
+  const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [selectedModel, setSelectedModel] = useState('Lumen-XL v2.1');
+  const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [steps, setSteps] = useState(30);
+  const [cfgScale, setCfgScale] = useState(7);
+  const [sampler, setSampler] = useState('DPM++ 2M Karras');
+  const [batchCount, setBatchCount] = useState(1);
+  const [favorites, setFavorites] = useState<Set<string>>(
+    new Set(['img-1', 'img-3', 'img-6', 'img-9']),
+  );
+
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  return (
+    <AppContext.Provider
+      value={{
+        activeView,
+        setActiveView,
+        prompt,
+        setPrompt,
+        negativePrompt,
+        setNegativePrompt,
+        selectedModel,
+        setSelectedModel,
+        aspectRatio,
+        setAspectRatio,
+        steps,
+        setSteps,
+        cfgScale,
+        setCfgScale,
+        sampler,
+        setSampler,
+        batchCount,
+        setBatchCount,
+        favorites,
+        toggleFavorite,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
