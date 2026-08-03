@@ -226,22 +226,43 @@ export function AdminComfyUIPage() {
     const providerType = providers.find((p) => p.id === selectedProvider)?.provider_type;
 
     try {
-      const info = await detectConnection(serverUrl, providerType);
-      setConnectionInfo(info);
-      setTestResult('connected');
-      await supabase.from('system_logs').insert({
-        log_type: 'connection',
-        message: `Connection test to ${serverUrl}: SUCCESS`,
-        level: 'info',
-        details: { server_url: serverUrl, provider_type: providerType, info },
-      });
+      // Use server-side proxy to check ComfyUI (avoid direct client->ComfyUI requests)
+      const res = await fetch('/api/comfy/check', { method: 'GET' });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && (json.ok === true || json.status === 'ok' || json.health)) {
+        setTestResult('connected');
+        const info = {
+          providerType: 'ComfyUI (proxied)',
+          endpoint: serverUrl,
+          version: (json.version as string) ?? undefined,
+          availableModels: undefined as string[] | undefined,
+          raw: json as Record<string, unknown>,
+        };
+        setConnectionInfo(info);
+        await supabase.from('system_logs').insert({
+          log_type: 'connection',
+          message: `Connection test to ${serverUrl} via proxy: SUCCESS`,
+          level: 'info',
+          details: { server_url: serverUrl, provider_type: providerType, info },
+        });
+      } else {
+        const msg = json?.error ?? `Status ${res.status}`;
+        setTestResult('failed');
+        setTestError(String(msg));
+        await supabase.from('system_logs').insert({
+          log_type: 'connection',
+          message: `ComfyUI connection test to ${serverUrl} via proxy: FAILED`,
+          level: 'error',
+          details: { server_url: serverUrl, provider_type: providerType, error: msg },
+        });
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       setTestResult('failed');
       setTestError(msg);
       await supabase.from('system_logs').insert({
         log_type: 'connection',
-        message: `ComfyUI connection test to ${serverUrl}: FAILED`,
+        message: `ComfyUI connection test to ${serverUrl} via proxy: FAILED`,
         level: 'error',
         details: { server_url: serverUrl, provider_type: providerType, error: msg },
       });
