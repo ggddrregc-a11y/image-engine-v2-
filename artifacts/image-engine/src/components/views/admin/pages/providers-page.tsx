@@ -61,7 +61,7 @@ export function AdminProvidersPage() {
     fetchProviders();
   }, [fetchProviders]);
 
-  const handleSave = async (provider: Partial<AIProvider>) => {
+  const handleSave = async (provider: Partial<AIProvider> & { api_key?: string; base_url?: string }) => {
     if (editing) {
       await supabase.from('ai_providers').update({
         name: provider.name,
@@ -69,6 +69,8 @@ export function AdminProvidersPage() {
         enabled: provider.enabled,
         priority: provider.priority,
         notes: provider.notes,
+        api_key: provider.api_key ?? '',
+        base_url: provider.base_url ?? '',
         updated_at: new Date().toISOString(),
       }).eq('id', editing.id);
     } else {
@@ -78,6 +80,8 @@ export function AdminProvidersPage() {
         enabled: provider.enabled ?? true,
         priority: provider.priority ?? 0,
         notes: provider.notes ?? '',
+        api_key: provider.api_key ?? '',
+        base_url: provider.base_url ?? '',
       });
     }
     setShowForm(false);
@@ -180,16 +184,30 @@ export function AdminProvidersPage() {
     let result: ConnectionTestResult;
 
     try {
-      result = await detectProviderConnection(p);
+      const res = await fetch('/api/provider/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_type: p.provider_type,
+          base_url: (p as any).base_url ?? '',
+          api_key: (p as any).api_key ?? '',
+        }),
+      });
+      const data = await res.json() as any;
+      result = {
+        success: data.success,
+        latencyMs: data.latencyMs ?? 0,
+        authStatus: data.success ? 'authenticated' : 'failed',
+        version: data.version,
+        availableModels: data.availableModels,
+        error: data.error,
+      };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Connection failed';
       result = {
         success: false,
         latencyMs: 0,
         authStatus: 'failed',
-        version: undefined,
-        availableModels: undefined,
-        error: msg,
+        error: error instanceof Error ? error.message : 'Connection failed',
       };
     }
 
@@ -384,6 +402,27 @@ function ProviderForm({
   const [enabled, setEnabled] = useState(provider?.enabled ?? true);
   const [priority, setPriority] = useState(String(provider?.priority ?? 1));
   const [notes, setNotes] = useState(provider?.notes ?? '');
+  const [apiKey, setApiKey] = useState((provider as any)?.api_key ?? '');
+  const [baseUrl, setBaseUrl] = useState((provider as any)?.base_url ?? '');
+  const [showKey, setShowKey] = useState(false);
+
+  // Default base URLs per provider type
+  const DEFAULT_URLS: Partial<Record<ProviderType, string>> = {
+    openai: 'https://api.openai.com',
+    ollama: 'http://localhost:11434',
+    stability: 'https://api.stability.ai',
+    huggingface: 'https://api-inference.huggingface.co',
+    custom: '',
+  };
+
+  const handleTypeChange = (v: string) => {
+    const t = v as ProviderType;
+    setProviderType(t);
+    if (!baseUrl && DEFAULT_URLS[t]) setBaseUrl(DEFAULT_URLS[t]!);
+  };
+
+  const needsApiKey = providerType !== 'comfyui' && providerType !== 'ollama';
+  const needsBaseUrl = providerType !== 'comfyui';
 
   return (
     <motion.div
@@ -403,16 +442,55 @@ function ProviderForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <AdminLabel>Provider Name</AdminLabel>
-            <AdminInput value={name} onChange={setName} placeholder="e.g. Local ComfyUI" />
+            <AdminInput value={name} onChange={setName} placeholder="e.g. My OpenAI" />
           </div>
           <div>
             <AdminLabel>Provider Type</AdminLabel>
             <AdminSelect
               value={providerType}
-              onChange={(v) => setProviderType(v as ProviderType)}
+              onChange={handleTypeChange}
               options={PROVIDER_TYPES}
             />
           </div>
+
+          {needsBaseUrl && (
+            <div className="sm:col-span-2">
+              <AdminLabel>Base URL</AdminLabel>
+              <AdminInput
+                value={baseUrl}
+                onChange={setBaseUrl}
+                placeholder="https://api.openai.com"
+              />
+            </div>
+          )}
+
+          {needsApiKey && (
+            <div className="sm:col-span-2">
+              <AdminLabel>API Key</AdminLabel>
+              <div className="relative">
+                <AdminInput
+                  value={apiKey}
+                  onChange={setApiKey}
+                  type={showKey ? 'text' : 'password'}
+                  placeholder="sk-..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  {showKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {providerType === 'openai' && 'Get your key from platform.openai.com/api-keys'}
+                {providerType === 'stability' && 'Get your key from platform.stability.ai'}
+                {providerType === 'huggingface' && 'Get your key from huggingface.co/settings/tokens'}
+                {providerType === 'custom' && 'Enter the API key for your custom provider'}
+              </p>
+            </div>
+          )}
+
           <div>
             <AdminLabel>Priority (higher = preferred)</AdminLabel>
             <AdminInput value={priority} onChange={setPriority} type="number" placeholder="1" />
@@ -430,7 +508,15 @@ function ProviderForm({
           <AdminButton
             variant="primary"
             size="sm"
-            onClick={() => onSave({ name, provider_type: providerType, enabled, priority: Number(priority), notes })}
+            onClick={() => onSave({
+              name,
+              provider_type: providerType,
+              enabled,
+              priority: Number(priority),
+              notes,
+              api_key: apiKey,
+              base_url: baseUrl,
+            } as any)}
             disabled={!name.trim()}
           >
             <Check className="h-4 w-4" />

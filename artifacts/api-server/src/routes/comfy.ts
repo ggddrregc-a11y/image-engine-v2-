@@ -146,4 +146,83 @@ router.get("/comfy/image", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/provider/test
+ * Tests connectivity to an AI provider using its stored credentials.
+ */
+router.post("/provider/test", async (req, res) => {
+  const { provider_type, base_url, api_key } = req.body as {
+    provider_type: string;
+    base_url: string;
+    api_key: string;
+  };
+
+  if (!base_url) {
+    return res.status(400).json({ success: false, error: "base_url is required" });
+  }
+
+  const endpoint = base_url.replace(/\/$/, "");
+  const start = Date.now();
+
+  try {
+    if (provider_type === "comfyui") {
+      const r = await fetch(`${endpoint}/system_stats`);
+      const latencyMs = Date.now() - start;
+      if (!r.ok) return res.json({ success: false, latencyMs, error: `HTTP ${r.status}` });
+      const json = await r.json() as any;
+      return res.json({ success: true, latencyMs, version: json?.system?.python_version ?? "unknown" });
+    }
+
+    if (provider_type === "openai" || provider_type === "openrouter" || provider_type === "custom") {
+      const r = await fetch(`${endpoint}/v1/models`, {
+        headers: { Authorization: `Bearer ${api_key}` },
+      });
+      const latencyMs = Date.now() - start;
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({})) as any;
+        return res.json({ success: false, latencyMs, error: err?.error?.message ?? `HTTP ${r.status}` });
+      }
+      const json = await r.json() as any;
+      const models = Array.isArray(json?.data)
+        ? json.data.slice(0, 10).map((m: any) => m.id ?? m.name)
+        : [];
+      return res.json({ success: true, latencyMs, availableModels: models });
+    }
+
+    if (provider_type === "ollama") {
+      const r = await fetch(`${endpoint}/api/tags`);
+      const latencyMs = Date.now() - start;
+      if (!r.ok) return res.json({ success: false, latencyMs, error: `HTTP ${r.status}` });
+      const json = await r.json() as any;
+      const models = (json?.models ?? []).map((m: any) => m.name);
+      return res.json({ success: true, latencyMs, availableModels: models });
+    }
+
+    if (provider_type === "stability") {
+      const r = await fetch(`${endpoint}/v1/engines/list`, {
+        headers: { Authorization: `Bearer ${api_key}` },
+      });
+      const latencyMs = Date.now() - start;
+      if (!r.ok) return res.json({ success: false, latencyMs, error: `HTTP ${r.status}` });
+      const json = await r.json() as any;
+      const models = Array.isArray(json) ? json.map((e: any) => e.id) : [];
+      return res.json({ success: true, latencyMs, availableModels: models });
+    }
+
+    if (provider_type === "huggingface") {
+      const r = await fetch("https://huggingface.co/api/whoami", {
+        headers: { Authorization: `Bearer ${api_key}` },
+      });
+      const latencyMs = Date.now() - start;
+      if (!r.ok) return res.json({ success: false, latencyMs, error: `HTTP ${r.status}` });
+      const json = await r.json() as any;
+      return res.json({ success: true, latencyMs, version: json?.name ?? "authenticated" });
+    }
+
+    return res.json({ success: false, error: `Unknown provider type: ${provider_type}` });
+  } catch (err) {
+    return res.json({ success: false, latencyMs: Date.now() - start, error: String(err) });
+  }
+});
+
 export default router;
