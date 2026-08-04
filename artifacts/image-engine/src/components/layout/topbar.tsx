@@ -10,7 +10,6 @@ import {
   User,
   CreditCard,
   KeyRound,
-  BellRing,
   Shield,
   Palette,
   Globe,
@@ -46,12 +45,9 @@ const AVATAR_MAP: Record<string, { bg: string; emoji: string }> = {
 };
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const { setActiveView, locale, setLocale, credits, avatarId } = useApp();
-  const [wsOpen, setWsOpen] = useState(false);
-  const [wsIndex, setWsIndex] = useState(0);
+  const { setActiveView, locale, setLocale, credits, avatarId, setSettingsSection } = useApp();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { logout: adminLogout } = useAdminAuth();
   const profileRef = useRef<HTMLDivElement>(null);
@@ -63,13 +59,12 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
   ];
 
   const PROFILE_MENU = [
-    { icon: User, label: t(locale, 'profile.myProfile'), view: 'settings' as const, action: null },
-    { icon: CreditCard, label: t(locale, 'profile.billing'), view: 'settings' as const, action: null },
-    { icon: KeyRound, label: t(locale, 'profile.apiKeys'), view: 'api' as const, action: null },
-    { icon: BellRing, label: t(locale, 'profile.notifications'), view: 'settings' as const, action: null },
-    { icon: Shield, label: t(locale, 'profile.security'), view: 'settings' as const, action: null },
-    { icon: Palette, label: t(locale, 'profile.appearance'), view: 'settings' as const, action: null },
-    { icon: Globe, label: t(locale, 'profile.language'), view: null, action: () => setLangOpen((v) => !v) },
+    { icon: User,     label: t(locale, 'profile.myProfile'),     section: 'profile',      view: 'settings' as const },
+    { icon: CreditCard, label: t(locale, 'profile.billing'),     section: 'billing',      view: 'settings' as const },
+    { icon: KeyRound, label: t(locale, 'profile.apiKeys'),        section: null,           view: 'api' as const },
+    { icon: Shield,   label: t(locale, 'profile.security'),       section: 'security',     view: 'settings' as const },
+    { icon: Palette,  label: t(locale, 'profile.appearance'),     section: 'appearance',   view: 'settings' as const },
+    { icon: Globe,    label: t(locale, 'profile.language'),        section: 'language',     view: 'settings' as const },
   ] as const;
 
   // Close profile menu on outside click
@@ -258,46 +253,18 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
                   {PROFILE_MENU.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <div key={item.label}>
-                        <button
-                          onClick={() => {
-                            if (item.action) {
-                              item.action();
-                            } else if (item.view) {
-                              setActiveView(item.view);
-                              setProfileOpen(false);
-                            }
-                          }}
-                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
-                        >
-                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          {item.label}
-                          {item.action && (
-                            <ChevronDown className={cn('ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform', langOpen && item.icon === Globe && 'rotate-180')} />
-                          )}
-                        </button>
-
-                        {/* Language submenu inline */}
-                        {item.icon === Globe && langOpen && (
-                          <div className="mx-2 mb-1 overflow-hidden rounded-lg border border-border bg-secondary/50">
-                            {(['en', 'ar'] as const).map((lang) => (
-                              <button
-                                key={lang}
-                                onClick={() => {
-                                  setLocale(lang);
-                                  setLangOpen(false);
-                                  setProfileOpen(false);
-                                }}
-                                className="flex w-full items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-secondary"
-                              >
-                                <span className="text-base">{lang === 'en' ? '🇬🇧' : '🇸🇦'}</span>
-                                <span>{lang === 'en' ? t(locale, 'settings.language.english') : t(locale, 'settings.language.arabic')}</span>
-                                {locale === lang && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          if (item.section) setSettingsSection(item.section);
+                          setActiveView(item.view);
+                          setProfileOpen(false);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        {item.label}
+                      </button>
                     );
                   })}
                 </div>
@@ -307,19 +274,20 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 
                 {/* Footer items */}
                 <div className="p-1">
-                  {PROFILE_FOOTER.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.labelKey}
-                        onClick={() => setProfileOpen(false)}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        {t(locale, item.labelKey)}
-                      </button>
-                    );
-                  })}
+                  <button
+                    onClick={() => { setSettingsSection('support'); setActiveView('settings'); setProfileOpen(false); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
+                  >
+                    <LifeBuoy className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {t(locale, 'topbar.support')}
+                  </button>
+                  <button
+                    onClick={() => { setSettingsSection('docs'); setActiveView('settings'); setProfileOpen(false); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
+                  >
+                    <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {t(locale, 'topbar.documentation')}
+                  </button>
                 </div>
               </motion.div>
             )}

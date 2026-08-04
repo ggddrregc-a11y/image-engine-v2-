@@ -39,6 +39,9 @@ interface AppContextValue {
   // Avatar
   avatarId: string;
   setAvatarId: (id: string) => void;
+  // Settings section navigation
+  settingsSection: string;
+  setSettingsSection: (s: string) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -67,6 +70,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [generateCost, setGenerateCost] = useState(10);
   const [editCost, setEditCost] = useState(5);
   const [avatarId, setAvatarIdState] = useState<string>('a1');
+  const [settingsSection, setSettingsSection] = useState<string>('profile');
 
   // Load credits from localStorage on mount
   useEffect(() => {
@@ -179,6 +183,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         editCost,
         avatarId,
         setAvatarId,
+        settingsSection,
+        setSettingsSection,
       }}
     >
       {children}

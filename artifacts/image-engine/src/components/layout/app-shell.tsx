@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './sidebar';
 import { TopBar } from './topbar';
+import { Footer } from './footer';
 import { AppProvider, useApp } from '@/components/providers/app-provider';
 import { AdminAuthProvider } from '@/components/providers/admin-auth-provider';
 import { ViewRouter } from '@/components/views/view-router';
@@ -64,6 +65,7 @@ function ShellContent() {
         <main className="flex-1 overflow-hidden">
           <ViewRouter />
         </main>
+        <Footer />
       </div>
     </div>
   );

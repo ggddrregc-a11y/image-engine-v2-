@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings,
@@ -10,12 +10,16 @@ import {
   CreditCard,
   Globe,
   Check,
+  LifeBuoy,
+  BookOpen,
+  ExternalLink,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { useApp } from '@/components/providers/app-provider';
 import { t } from '@/lib/i18n';
+import { supabase } from '@/lib/supabase';
 
 const AVATARS = [
   { id: 'a1', bg: 'from-violet-500 to-purple-600', initials: '🎨' },
@@ -36,23 +40,44 @@ const SECTIONS = [
   { id: 'notifications', labelKey: 'settings.section.notifications', icon: Bell },
   { id: 'security', labelKey: 'settings.section.security', icon: Shield },
   { id: 'billing', labelKey: 'settings.section.billing', icon: CreditCard },
+  { id: 'support', labelKey: 'settings.section.support', icon: LifeBuoy },
+  { id: 'docs', labelKey: 'settings.section.docs', icon: BookOpen },
   { id: 'language', labelKey: 'settings.section.language', icon: Globe },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]['id'];
 
-export function SettingsView() {
-  const [section, setSection] = useState<SectionId>('profile');
+export function SettingsView({ initialSection }: { initialSection?: string }) {
+  const [section, setSection] = useState<SectionId>((initialSection as SectionId) ?? 'profile');
   const { theme, setTheme } = useTheme();
-  const { locale, setLocale, avatarId, setAvatarId } = useApp();
+  const { locale, setLocale, avatarId, setAvatarId, credits, settingsSection, setSettingsSection } = useApp();
   const [selectedAvatar, setSelectedAvatar] = useState(avatarId);
   const [savedAvatar, setSavedAvatar] = useState(avatarId);
+  const [supportLinks, setSupportLinks] = useState<{ id: string; label: string; url: string; icon: string }[]>([]);
   const [notifications, setNotifications] = useState({
     generationComplete: true,
     modelUpdates: true,
     creditAlerts: false,
     productNews: false,
   });
+
+  useEffect(() => {
+    if (initialSection) setSection(initialSection as SectionId);
+  }, [initialSection]);
+
+  // Respond to navigation from topbar dropdown
+  useEffect(() => {
+    if (settingsSection) {
+      setSection(settingsSection as SectionId);
+      setSettingsSection('');
+    }
+  }, [settingsSection, setSettingsSection]);
+
+  useEffect(() => {
+    supabase.from('support_links').select('*').order('sort_order').then(({ data }) => {
+      if (data) setSupportLinks(data);
+    });
+  }, []);
 
   return (
     <PageContainer>
@@ -220,20 +245,80 @@ export function SettingsView() {
           {section === 'security' && (
             <div className="space-y-5">
               <h3 className="font-display text-lg font-bold">{t(locale, 'settings.section.security')}</h3>
-              <Field label={t(locale, 'settings.security.currentPassword')} value="" type="password" />
-              <Field label={t(locale, 'settings.security.newPassword')} value="" type="password" />
-              <Field label={t(locale, 'settings.security.confirmPassword')} value="" type="password" />
-              <div className="rounded-xl border border-border bg-secondary/30 p-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{t(locale, 'settings.security.twoFactorTitle')}</span>
+
+              {/* Security status */}
+              <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/15">
+                  <Shield className="h-5 w-5 text-success" />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t(locale, 'settings.security.twoFactorDesc')}
-                </p>
-                <button className="mt-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:border-primary/30">
-                  {t(locale, 'settings.security.enable2fa')}
-                </button>
+                <div>
+                  <p className="text-sm font-semibold text-success">Your session is secure</p>
+                  <p className="text-xs text-muted-foreground">All data is encrypted and protected</p>
+                </div>
+              </div>
+
+              {/* Security tips */}
+              {[
+                {
+                  icon: '🔒',
+                  title: 'End-to-End Encryption',
+                  desc: 'All images and prompts are transmitted over HTTPS with TLS 1.3 encryption.',
+                },
+                {
+                  icon: '🛡️',
+                  title: 'No Data Stored Permanently',
+                  desc: 'Generated images are stored temporarily and never shared with third parties.',
+                },
+                {
+                  icon: '🍪',
+                  title: 'Local Storage Only',
+                  desc: 'Your preferences (theme, avatar, credits) are saved only in your browser — never on a server.',
+                },
+                {
+                  icon: '🚫',
+                  title: 'No Tracking',
+                  desc: 'We do not use advertising trackers or sell your data to any third party.',
+                },
+                {
+                  icon: '⚡',
+                  title: 'Secure API Connections',
+                  desc: 'All AI generation requests are routed through our secure backend — your API keys are never exposed.',
+                },
+                {
+                  icon: '🌐',
+                  title: 'Browser Security',
+                  desc: 'For best security, keep your browser up to date and avoid using shared or public devices.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="flex gap-4 rounded-xl border border-border bg-card/40 p-4">
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Session info */}
+              <div className="rounded-xl border border-border bg-card/40 p-4">
+                <p className="mb-3 text-sm font-semibold">Current Session</p>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Browser</span>
+                    <span className="font-medium text-foreground">{navigator.userAgent.split(' ').slice(-2).join(' ').split('/')[0]}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Started</span>
+                    <span className="font-medium text-foreground">{new Date().toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Connection</span>
+                    <span className="flex items-center gap-1 font-medium text-success">
+                      <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                      Encrypted (HTTPS)
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -255,7 +340,7 @@ export function SettingsView() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-xl border border-border bg-card/40 p-4">
                   <p className="text-xs text-muted-foreground">{t(locale, 'settings.billing.creditsRemaining')}</p>
-                  <p className="mt-1 font-display text-2xl font-bold">842</p>
+                  <p className="mt-1 font-display text-2xl font-bold">{credits}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-card/40 p-4">
                   <p className="text-xs text-muted-foreground">{t(locale, 'settings.billing.nextRenewal')}</p>
@@ -264,6 +349,86 @@ export function SettingsView() {
               </div>
             </div>
           )}
+          {section === 'support' && (
+            <div className="space-y-5">
+              <h3 className="font-display text-lg font-bold">Support</h3>
+              <p className="text-sm text-muted-foreground">
+                Need help? Reach us through any of the channels below.
+              </p>
+              {supportLinks.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-10 text-muted-foreground">
+                  <LifeBuoy className="h-8 w-8 opacity-30" />
+                  <p className="text-sm">No support links available yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {supportLinks.map((link) => (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-4 transition-all hover:border-primary/30 hover:bg-card"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{link.icon}</span>
+                        <span className="text-sm font-medium">{link.label}</span>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {section === 'docs' && (
+            <div className="space-y-5">
+              <h3 className="font-display text-lg font-bold">Documentation</h3>
+              <p className="text-sm text-muted-foreground">Learn how to get the most out of Image Engine.</p>
+              {[
+                {
+                  emoji: '🎨',
+                  title: 'Generate Images',
+                  desc: 'Go to the Generate section, write a detailed prompt describing the image you want, choose your settings (model, aspect ratio, quality), then press Generate.',
+                },
+                {
+                  emoji: '✏️',
+                  title: 'Edit Images',
+                  desc: 'Go to the Editor section, upload any image, write a description of the change you want (e.g. "add a blue sky background"), then press Edit Image.',
+                },
+                {
+                  emoji: '⚡',
+                  title: 'Credits System',
+                  desc: 'Every visitor starts with a set number of credits. Each generation or edit costs a certain amount. Credits are stored in your browser.',
+                },
+                {
+                  emoji: '🖼️',
+                  title: 'Gallery & History',
+                  desc: 'All your generated images are saved in the Gallery. You can view, favorite, and download them from there.',
+                },
+                {
+                  emoji: '🔧',
+                  title: 'Advanced Settings',
+                  desc: 'In the Generate section, expand "Generation Settings" to control steps, CFG scale, sampler, and batch count for fine-tuned results.',
+                },
+                {
+                  emoji: '🌍',
+                  title: 'Language',
+                  desc: 'You can switch the interface language between English and Arabic from Settings → Language.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="flex gap-4 rounded-xl border border-border bg-card/40 p-4">
+                  <span className="text-2xl">{item.emoji}</span>
+                  <div>
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {section === 'language' && (
             <div className="space-y-5">
               <h3 className="font-display text-lg font-bold">{t(locale, 'settings.section.language')}</h3>

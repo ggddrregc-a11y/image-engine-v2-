@@ -16,6 +16,7 @@ import {
   LogOut,
   Wand2,
   Zap,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
@@ -34,6 +35,7 @@ import { useApp } from '@/components/providers/app-provider';
 
 import { AdminImageEditorPage } from './pages/image-editor-page';
 import { AdminCreditsPage } from './pages/credits-page';
+import { AdminSupportPage } from './pages/support-page';
 
 export type AdminSubPage =
   | 'providers'
@@ -46,7 +48,8 @@ export type AdminSubPage =
   | 'users'
   | 'logs'
   | 'image-editor'
-  | 'credits';
+  | 'credits'
+  | 'support';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -58,6 +61,7 @@ const SUB_PAGES: {
   { id: 'comfyui', label: 'ComfyUI', icon: Workflow, description: 'ComfyUI server & workflow configuration' },
   { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
   { id: 'credits', label: 'Credits', icon: Zap, description: 'Visitor credits & cost per operation' },
+  { id: 'support', label: 'Support Links', icon: LifeBuoy, description: 'Manage support & social links shown to users' },
   { id: 'models', label: 'Models', icon: Boxes, description: 'Model definitions and defaults' },
   { id: 'templates', label: 'Prompt Templates', icon: FileText, description: 'Reusable prompt library' },
   { id: 'gen-settings', label: 'Generation Settings', icon: SlidersHorizontal, description: 'Global generation defaults' },
@@ -166,6 +170,7 @@ export function AdminView() {
             {subPage === 'logs' && <AdminLogsPage />}
             {subPage === 'image-editor' && <AdminImageEditorPage />}
             {subPage === 'credits' && <AdminCreditsPage />}
+            {subPage === 'support' && <AdminSupportPage />}
           </AdminPageContainer>
         </AnimatePresence>
       </div>
