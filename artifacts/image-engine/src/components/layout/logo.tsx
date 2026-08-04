@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-const LOGO_ICON = '/logo.jpg';
+const LOGO_ICON = '/logo.svg';
 
 type BrandLogoProps = {
   collapsed?: boolean;
