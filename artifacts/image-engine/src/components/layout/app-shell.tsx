@@ -26,33 +26,35 @@ function ShellContent() {
       {/* Mobile drawer */}
       <AnimatePresence>
         {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.div
-              initial={{ x: -300 }}
-              animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-              className="fixed left-0 top-0 z-50 h-full w-64 lg:hidden"
-            >
-              <div className="relative h-full">
-                <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="absolute -right-12 top-4 flex h-9 w-9 items-center justify-center rounded-lg bg-card text-foreground shadow-lg"
-                  aria-label="Close menu"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </motion.div>
-          </>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+        {mobileOpen && (
+          <motion.div
+            key="drawer"
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            exit={{ x: -300 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 36 }}
+            className="fixed left-0 top-0 z-50 h-full w-64 lg:hidden"
+          >
+            <div className="relative h-full">
+              <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="absolute -right-12 top-4 flex h-9 w-9 items-center justify-center rounded-lg bg-card text-foreground shadow-lg"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
