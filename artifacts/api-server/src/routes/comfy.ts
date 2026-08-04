@@ -140,7 +140,7 @@ router.get("/comfy/image", async (req, res) => {
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     const buffer = await imgRes.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    return res.send(Buffer.from(buffer));
   } catch (err) {
     return res.status(502).json({ error: String(err) });
   }
