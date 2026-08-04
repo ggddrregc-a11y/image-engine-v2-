@@ -21,6 +21,7 @@ import {
   Clock,
   Cpu,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/components/providers/app-provider';
 import { PageContainer } from './shared';
 import { cn } from '@/lib/utils';
@@ -57,8 +58,10 @@ export function GenerateView() {
     batchCount,
     setBatchCount,
   } = useApp();
+  const { toast } = useToast();
   const [quality, setQuality] = useState<'standard' | 'high'>('standard');
   const [savedWorkflows, setSavedWorkflows] = useState<ComfyUIWorkflow[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
 
   const [showNegative, setShowNegative] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -72,11 +75,16 @@ export function GenerateView() {
     const fetchWorkflows = async () => {
       const { data, error } = await supabase.from('comfyui_workflows').select('*').order('created_at', { ascending: false });
       if (data) {
-        setSavedWorkflows(data as ComfyUIWorkflow[]);
+        const workflows = data as ComfyUIWorkflow[];
+        setSavedWorkflows(workflows);
+        if (workflows.length > 0) {
+          setSelectedWorkflowId(workflows[0].id);
+          setSelectedModel(workflows[0].workflow_name);
+        }
       }
     };
     fetchWorkflows();
-  }, []);
+  }, [setSelectedModel]);
 
   // Simulate generation progress
   useEffect(() => {
@@ -103,7 +111,24 @@ export function GenerateView() {
   }, [jobs]);
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || jobs.some((j) => j.status === 'running' || j.status === 'queued'))
+    console.log('[Generate] workflowId=', selectedWorkflowId, 'prompt=', prompt);
+    if (!selectedWorkflowId) {
+      toast({
+        title: 'Workflow not selected',
+        description: 'Please select a saved workflow before generating.',
+      });
+      return;
+    }
+
+    if (!prompt.trim()) {
+      toast({
+        title: 'Prompt is required',
+        description: 'Please add a prompt before generating.',
+      });
+      return;
+    }
+
+    if (jobs.some((j) => j.status === 'running' || j.status === 'queued'))
       return;
 
     const nodes = ['Load Model', 'Encode Prompt', 'Sample', 'Decode Latent', 'Upscale', 'VAE Decode'];
@@ -121,7 +146,7 @@ export function GenerateView() {
     setJobs((prev) => [newJob, ...prev].slice(0, 3));
 
     try {
-      const response = await fetch('/api/comfy/generate', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,16 +160,26 @@ export function GenerateView() {
           sampler,
           batchCount,
           quality,
-          workflowId: undefined,
+          workflowId: selectedWorkflowId || undefined,
         }),
       });
 
-      const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Generation request failed');
+        const errData = await response.json().catch(async () => {
+          const text = await response.text().catch(() => 'Unable to read error body');
+          return { text };
+        });
+        console.error('API Error:', response.status, JSON.stringify(errData, null, 2));
+        return;
+      }
+
+      const result = await response.json();
+      if (!result?.success) {
+        console.error('Generation failed:', JSON.stringify(result, null, 2));
+        return;
       }
     } catch (error) {
-      console.error(error);
+      console.error('Generate request failed:', error);
     }
 
     // Cycle nodes for visual effect
@@ -353,7 +388,10 @@ export function GenerateView() {
                         savedWorkflows.map((workflow) => (
                           <button
                             key={workflow.id}
-                            onClick={() => setSelectedModel(workflow.workflow_name)}
+                            onClick={() => {
+                              setSelectedModel(workflow.workflow_name);
+                              setSelectedWorkflowId(workflow.id);
+                            }}
                             className={cn(
                               'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
                               selectedModel === workflow.workflow_name

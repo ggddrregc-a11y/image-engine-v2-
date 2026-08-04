@@ -54,6 +54,7 @@ const patchWorkflow = (
   width: number,
   height: number,
   quality: 'standard' | 'high',
+  promptText: string,
 ) => {
   const updated = { ...workflowJson };
   const qualitySteps = resolveQualitySteps(quality);
@@ -68,6 +69,7 @@ const patchWorkflow = (
 
     const isLatentImage = classType.includes('EmptySD3LatentImage') || classType.includes('EmptyLatentImage');
     const isModelSampler = classType.includes('KSampler') || nodeId === 'KSamplerSelect';
+    const hasPromptField = 'prompt' in inputs || 'positive_prompt' in inputs || 'positive' in inputs || 'text' in inputs;
 
     if (isLatentImage) {
       updated[nodeId] = {
@@ -94,6 +96,19 @@ const patchWorkflow = (
         },
       };
     }
+
+    if (hasPromptField) {
+      updated[nodeId] = {
+        ...node,
+        inputs: {
+          ...inputs,
+          prompt: promptText,
+          positive_prompt: promptText,
+          positive: promptText,
+          text: promptText,
+        },
+      };
+    }
   }
   return updated;
 };
@@ -117,20 +132,50 @@ const postToComfyUI = async (serverUrl: string, workflowJson: Record<string, unk
 };
 
 export async function POST(request: Request) {
-  const body = await request.json() as GenerateRequest;
+  let body: GenerateRequest;
+  try {
+    body = (await request.json()) as GenerateRequest;
+  } catch (err) {
+    console.log('[api/generate] invalid request body', err);
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  console.log('[api/generate] received request', {
+    workflowId: body.workflowId,
+    prompt: body.prompt,
+    model: body.model,
+    width: body.width,
+    height: body.height,
+  });
+
   const workflow = await findComfyUIWorkflow(body.workflowId);
 
   if (!workflow) {
+    console.log('[api/generate] workflow not found', { workflowId: body.workflowId });
+    console.log('[api/generate] workflow not found', { workflowId: body.workflowId });
     return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
   }
 
-  const updatedWorkflowJson = patchWorkflow(workflow.workflow_json, body.width, body.height, body.quality);
+  console.log('[api/generate] fetched workflow from Supabase', { workflowId: workflow.id, workflowName: workflow.workflow_name, server_url: workflow.server_url });
+
+  let storedWorkflowJson: Record<string, unknown>;
+  try {
+    storedWorkflowJson = typeof workflow.workflow_json === 'string' ? JSON.parse(workflow.workflow_json) : workflow.workflow_json;
+  } catch (err) {
+    console.log('[api/generate] failed to parse workflow_json', err);
+    return NextResponse.json({ error: 'Invalid workflow_json stored for workflow' }, { status: 500 });
+  }
+
+  const updatedWorkflowJson = patchWorkflow(storedWorkflowJson, body.width, body.height, body.quality, body.prompt);
   let postResult: unknown = null;
 
   try {
+    console.log('[api/generate] sending request to ComfyUI', { serverUrl: workflow.server_url });
     postResult = await postToComfyUI(workflow.server_url, updatedWorkflowJson);
+    console.log('[api/generate] ComfyUI responded', postResult);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    console.log('[api/generate] ComfyUI request failed', message);
     await supabase.from('system_logs').insert({
       log_type: 'generation',
       message: `Failed ComfyUI generation request for workflow ${workflow.id}`,
