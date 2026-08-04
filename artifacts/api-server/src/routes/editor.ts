@@ -72,7 +72,14 @@ router.post("/edit", async (req, res) => {
 
     const response = await fetch(apiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "https://viscodev.x10.mx",
+        "Referer": "https://viscodev.x10.mx/",
+      },
       body: JSON.stringify(payload),
     });
 
@@ -80,6 +87,12 @@ router.post("/edit", async (req, res) => {
       const errText = await response.text().catch(() => "unknown error");
       req.log.error({ status: response.status, errText }, "[edit] API returned error");
       return res.status(502).json({ ok: false, error: `Editor API error: ${response.status}` });
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      req.log.error({ contentType }, "[edit] API returned non-JSON (likely bot protection)");
+      return res.status(503).json({ ok: false, error: "Service unavailable. Try again later." });
     }
 
     const result = await response.json() as Record<string, unknown>;
