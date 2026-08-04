@@ -5,7 +5,7 @@ import http from "http";
 const router = Router();
 
 /**
- * Makes an HTTP/HTTPS POST request ignoring SSL errors (like Python's verify=False).
+ * POST request with SSL verification disabled (equivalent to Python's verify=False).
  */
 function postJson(url: string, body: string, timeoutMs: number): Promise<{ status: number; contentType: string; body: string }> {
   return new Promise((resolve, reject) => {
@@ -20,7 +20,6 @@ function postJson(url: string, body: string, timeoutMs: number): Promise<{ statu
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(body),
       },
-      // Disable SSL verification — same as Python's verify=False
       rejectUnauthorized: false,
     };
 
@@ -49,11 +48,55 @@ function postJson(url: string, body: string, timeoutMs: number): Promise<{ statu
 }
 
 /**
+ * Upload buffer to catbox.moe and return direct URL.
+ */
+async function uploadToCatbox(buffer: Buffer): Promise<string> {
+  const boundary = `----FormBoundary${Date.now()}`;
+  const filename = "image.png";
+  const contentType = "image/png";
+
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`),
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: "catbox.moe",
+      port: 443,
+      path: "/user/api.php",
+      method: "POST",
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": body.length,
+      },
+      rejectUnauthorized: false,
+    };
+
+    const req = https.request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (c: Buffer) => chunks.push(c));
+      res.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8").trim();
+        if (text.startsWith("http")) {
+          resolve(text);
+        } else {
+          reject(new Error(`catbox.moe returned: ${text}`));
+        }
+      });
+    });
+
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error("catbox upload timeout")); });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
  * POST /api/edit
- *
- * Proxies an image editing request to the external AI editing API.
- * Accepts: { text: string, imageUrl: string, width?: number, height?: number }
- * Returns: { ok: boolean, imageUrl?: string, imageData?: string, error?: string }
  */
 router.post("/edit", async (req, res) => {
   const { text, imageUrl, width, height } = req.body as {
@@ -72,7 +115,6 @@ router.post("/edit", async (req, res) => {
   try {
     req.log.info({ apiUrl, width, height }, "[edit] sending request to image editor API");
 
-    // If imageUrl is a base64 data URL, upload it to a temporary host first
     let resolvedImageUrl = imageUrl;
 
     if (imageUrl.startsWith("data:image")) {
@@ -80,29 +122,16 @@ router.post("/edit", async (req, res) => {
       if (!base64Match) {
         return res.status(400).json({ ok: false, error: "Invalid image data" });
       }
-      const base64Data = base64Match[1];
-      const buffer = Buffer.from(base64Data, "base64");
+      const buffer = Buffer.from(base64Match[1], "base64");
 
-      const formData = new FormData();
-      const blob = new Blob([buffer], { type: "image/png" });
-      formData.append("file", blob, "image.png");
-
-      const uploadRes = await fetch("https://0x0.st", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
+      try {
+        resolvedImageUrl = await uploadToCatbox(buffer);
+        req.log.info({ resolvedImageUrl }, "[edit] uploaded to catbox.moe");
+      } catch (uploadErr) {
+        const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+        req.log.error({ err: msg }, "[edit] catbox upload failed");
         return res.status(502).json({ ok: false, error: "Failed to upload image for processing" });
       }
-
-      resolvedImageUrl = (await uploadRes.text()).trim();
-      if (!resolvedImageUrl.startsWith("http")) {
-        return res.status(502).json({ ok: false, error: "Failed to get upload URL" });
-      }
-
-      req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to 0x0.st");
-      req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to temp host");
     }
 
     const payload: Record<string, unknown> = { text, links: resolvedImageUrl };
@@ -110,7 +139,6 @@ router.post("/edit", async (req, res) => {
     if (height) payload.height = height;
 
     const jsonBody = JSON.stringify(payload);
-
     req.log.info({ resolvedImageUrl }, "[edit] calling viscodev API");
 
     const response = await postJson(apiUrl, jsonBody, 120000);
@@ -121,7 +149,7 @@ router.post("/edit", async (req, res) => {
     }
 
     if (!response.contentType.includes("application/json")) {
-      req.log.error({ contentType: response.contentType }, "[edit] API returned non-JSON (likely bot protection)");
+      req.log.error({ contentType: response.contentType }, "[edit] API returned non-JSON");
       return res.status(503).json({ ok: false, error: "Service unavailable. Try again later." });
     }
 
