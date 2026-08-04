@@ -1,16 +1,3 @@
 [build]
-builder = "nixpacks"
-buildCommand = "pnpm install --no-frozen-lockfile && pnpm run build"
-
-[build.nixpacksPlan]
-providers = []
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_20", "nodePackages_latest.pnpm", "openssl"]
-
-[build.nixpacksPlan.phases.install]
-cmds = ["echo 'skipping frozen install'"]
-
-[build.nixpacksPlan.phases.build]
-cmds = ["pnpm install --no-frozen-lockfile && pnpm run build"]
-dependsOn = ["install"]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
