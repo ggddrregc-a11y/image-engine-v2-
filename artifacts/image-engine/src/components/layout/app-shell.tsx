@@ -39,7 +39,7 @@ function ShellContent() {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-              className="fixed left-0 top-0 z-50 h-full lg:hidden"
+              className="fixed left-0 top-0 z-50 h-full w-64 lg:hidden"
             >
               <div className="relative h-full">
                 <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
