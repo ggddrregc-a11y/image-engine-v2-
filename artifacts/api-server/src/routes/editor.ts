@@ -1,10 +1,52 @@
 import { Router } from "express";
-import { Agent } from "https";
+import https from "https";
+import http from "http";
 
 const router = Router();
 
-// Bypass SSL verification — matches behavior of the Python bot (verify=False)
-const insecureAgent = new Agent({ rejectUnauthorized: false });
+/**
+ * Makes an HTTP/HTTPS POST request ignoring SSL errors (like Python's verify=False).
+ */
+function postJson(url: string, body: string, timeoutMs: number): Promise<{ status: number; contentType: string; body: string }> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const isHttps = parsed.protocol === "https:";
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: parsed.pathname + parsed.search,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body),
+      },
+      // Disable SSL verification — same as Python's verify=False
+      rejectUnauthorized: false,
+    };
+
+    const lib = isHttps ? https : http;
+    const req = lib.request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      res.on("end", () => {
+        resolve({
+          status: res.statusCode ?? 0,
+          contentType: (res.headers["content-type"] as string) ?? "",
+          body: Buffer.concat(chunks).toString("utf8"),
+        });
+      });
+    });
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      reject(new Error(`Request timed out after ${timeoutMs}ms`));
+    });
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 /**
  * POST /api/edit
@@ -25,7 +67,6 @@ router.post("/edit", async (req, res) => {
     return res.status(400).json({ ok: false, error: "text and imageUrl are required" });
   }
 
-  // Get API URL from env or use default
   const apiUrl = process.env["IMAGE_EDITOR_API_URL"] ?? "https://viscodev.x10.mx/img_editing/api.php";
 
   try {
@@ -35,7 +76,6 @@ router.post("/edit", async (req, res) => {
     let resolvedImageUrl = imageUrl;
 
     if (imageUrl.startsWith("data:image")) {
-      // Extract base64 content and upload to tmpfiles.org
       const base64Match = imageUrl.match(/^data:image\/\w+;base64,(.+)$/);
       if (!base64Match) {
         return res.status(400).json({ ok: false, error: "Invalid image data" });
@@ -43,7 +83,6 @@ router.post("/edit", async (req, res) => {
       const base64Data = base64Match[1];
       const buffer = Buffer.from(base64Data, "base64");
 
-      // Upload to tmpfiles.org (free, no auth needed)
       const formData = new FormData();
       const blob = new Blob([buffer], { type: "image/png" });
       formData.append("file", blob, "image.png");
@@ -63,8 +102,6 @@ router.post("/edit", async (req, res) => {
         return res.status(502).json({ ok: false, error: "Failed to get upload URL" });
       }
 
-      // tmpfiles.org returns https://tmpfiles.org/XXXXXX/image.png
-      // direct download link is https://tmpfiles.org/dl/XXXXXX/image.png
       resolvedImageUrl = tmpUrl.replace("tmpfiles.org/", "tmpfiles.org/dl/");
       req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to temp host");
     }
@@ -75,37 +112,26 @@ router.post("/edit", async (req, res) => {
 
     const jsonBody = JSON.stringify(payload);
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(jsonBody).toString(),
-      },
-      body: jsonBody,
-      // @ts-ignore — Node 18+ supports agent
-      agent: insecureAgent,
-      signal: AbortSignal.timeout(120000),
-    });
+    req.log.info({ resolvedImageUrl }, "[edit] calling viscodev API");
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "unknown error");
-      req.log.error({ status: response.status, errText }, "[edit] API returned error");
+    const response = await postJson(apiUrl, jsonBody, 120000);
+
+    if (response.status < 200 || response.status >= 300) {
+      req.log.error({ status: response.status }, "[edit] API returned error");
       return res.status(502).json({ ok: false, error: `Editor API error: ${response.status}` });
     }
 
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("application/json")) {
-      req.log.error({ contentType }, "[edit] API returned non-JSON (likely bot protection)");
+    if (!response.contentType.includes("application/json")) {
+      req.log.error({ contentType: response.contentType }, "[edit] API returned non-JSON (likely bot protection)");
       return res.status(503).json({ ok: false, error: "Service unavailable. Try again later." });
     }
 
-    const result = await response.json() as Record<string, unknown>;
+    const result = JSON.parse(response.body) as Record<string, unknown>;
 
     if (!result.success) {
       return res.status(422).json({ ok: false, error: (result.error as string) ?? "Editing failed" });
     }
 
-    // Return image data or URL
     if (result.image_data) {
       return res.json({ ok: true, imageData: result.image_data as string });
     }
