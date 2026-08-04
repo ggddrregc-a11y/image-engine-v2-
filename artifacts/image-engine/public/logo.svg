@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 100" fill="none">
+  <!-- Infinity loop icon (yellow) -->
+  <g transform="translate(8, 10)">
+    <!-- Left loop outer -->
+    <path d="M42 40 C42 24 28 16 16 16 C4 16 -4 26 -4 40 C-4 54 4 64 16 64 C28 64 36 56 42 48" stroke="#F5C800" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Right loop outer -->
+    <path d="M42 40 C42 24 56 16 68 16 C80 16 88 26 88 40 C88 54 80 64 68 64 C56 64 48 56 42 48" stroke="#F5C800" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Left loop inner -->
+    <path d="M42 40 C36 33 30 28 24 28 C18 28 14 33 14 40 C14 47 18 52 24 52 C30 52 36 47 42 40" stroke="#F5C800" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Right loop inner -->
+    <path d="M42 40 C48 33 54 28 60 28 C66 28 70 33 70 40 C70 47 66 52 60 52 C54 52 48 47 42 40" stroke="#F5C800" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Top dot -->
+    <circle cx="72" cy="14" r="4" fill="#F5C800"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="112" y="56" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="400" fill="#4A4A4A" letter-spacing="-0.3">
+    <tspan font-weight="300">image</tspan><tspan font-weight="600"> Engine</tspan>
+  </text>
+</svg>

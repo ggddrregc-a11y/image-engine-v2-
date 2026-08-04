@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "image Engine"
+description = "An AI image generation platform that connects to ComfyUI backends (hosted on Lightning AI or locally). Users can write prompts, select workflows and models, configure generation settings (steps, CFG scale, sampler, aspect ratio, quality), and queue generations. The platform includes an admin panel for managing ComfyUI workflows, providers, models, storage, and system logs."
+version = "1.0.0"
+id = "artifacts/image-engine"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24539
+
+[services.development]
+run = "pnpm --filter @workspace/image-engine run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/image-engine", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/image-engine/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24539"
+BASE_PATH = "/"
