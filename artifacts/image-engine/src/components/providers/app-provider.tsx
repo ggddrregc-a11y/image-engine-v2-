@@ -2,6 +2,10 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ViewId } from '@/lib/types';
 import type { Locale } from '@/lib/i18n';
+import { supabase } from '@/lib/supabase';
+
+const CREDITS_KEY = 'ie_credits';
+const DEFAULT_INITIAL_CREDITS = 100;
 
 interface AppContextValue {
   activeView: ViewId;
@@ -26,6 +30,11 @@ interface AppContextValue {
   toggleFavorite: (id: string) => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  // Credits
+  credits: number;
+  deductCredits: (amount: number) => boolean;
+  generateCost: number;
+  editCost: number;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -50,6 +59,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     new Set(['img-1', 'img-3', 'img-6', 'img-9']),
   );
   const [locale, setLocaleState] = useState<Locale>('en');
+  const [credits, setCredits] = useState<number>(DEFAULT_INITIAL_CREDITS);
+  const [generateCost, setGenerateCost] = useState(10);
+  const [editCost, setEditCost] = useState(5);
+
+  // Load credits from localStorage on mount
+  useEffect(() => {
+    const stored = window.localStorage.getItem(CREDITS_KEY);
+    if (stored !== null) {
+      setCredits(parseInt(stored, 10));
+    }
+    // else: first visit — default 100 will be replaced after fetching settings
+  }, []);
+
+  // Fetch credit settings from Supabase on mount
+  useEffect(() => {
+    supabase
+      .from('credit_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.generate_cost != null) setGenerateCost(data.generate_cost);
+        if (data.edit_cost != null) setEditCost(data.edit_cost);
+        // Only set initial credits if this is the very first visit
+        const stored = window.localStorage.getItem(CREDITS_KEY);
+        if (stored === null && data.initial_credits != null) {
+          setCredits(data.initial_credits);
+          window.localStorage.setItem(CREDITS_KEY, String(data.initial_credits));
+        }
+      });
+  }, []);
+
+  // Persist credits to localStorage on every change
+  useEffect(() => {
+    window.localStorage.setItem(CREDITS_KEY, String(credits));
+  }, [credits]);
+
+  // Deduct credits — returns true if successful, false if not enough
+  const deductCredits = useCallback((amount: number): boolean => {
+    let success = false;
+    setCredits((prev) => {
+      if (prev < amount) return prev;
+      success = true;
+      return prev - amount;
+    });
+    return success;
+  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('locale') as Locale | null;
@@ -100,6 +157,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleFavorite,
         locale,
         setLocale,
+        credits,
+        deductCredits,
+        generateCost,
+        editCost,
       }}
     >
       {children}

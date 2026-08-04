@@ -33,7 +33,7 @@ const PROFILE_FOOTER = [
 ] as const;
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const { setActiveView, locale, setLocale } = useApp();
+  const { setActiveView, locale, setLocale, credits } = useApp();
   const [wsOpen, setWsOpen] = useState(false);
   const [wsIndex, setWsIndex] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -106,7 +106,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         {/* Credits */}
         <div className="hidden items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2 lg:flex">
           <Zap className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">842</span>
+          <span className="text-sm font-semibold">{credits}</span>
           <span className="text-xs text-muted-foreground">{t(locale, 'topbar.credits')}</span>
         </div>
 

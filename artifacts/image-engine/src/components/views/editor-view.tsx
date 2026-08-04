@@ -9,14 +9,17 @@ import {
   Loader2,
   ImageIcon,
   RotateCcw,
+  Zap,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useApp } from '@/components/providers/app-provider';
 import { ASPECT_RATIOS } from '@/lib/mock-data';
 
 export function EditorView() {
   const { toast } = useToast();
+  const { credits, deductCredits, editCost } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedImageName, setUploadedImageName] = useState('');
@@ -50,6 +53,17 @@ export function EditorView() {
 
   const handleEdit = async () => {
     if (!uploadedImage || !prompt.trim()) return;
+
+    // Check credits before proceeding
+    if (credits < editCost) {
+      toast({
+        title: 'Insufficient credits',
+        description: `You need ${editCost} credits to edit an image. You have ${credits}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setResultImage(null);
 
@@ -71,6 +85,9 @@ export function EditorView() {
         toast({ title: 'Edit failed', description: data.error ?? 'Unknown error', variant: 'destructive' });
         return;
       }
+
+      // Deduct credits only on success
+      deductCredits(editCost);
 
       if (data.imageData) {
         setResultImage(`data:image/png;base64,${data.imageData}`);
@@ -202,10 +219,10 @@ export function EditorView() {
             {/* Edit button */}
             <button
               onClick={handleEdit}
-              disabled={!uploadedImage || !prompt.trim() || isLoading}
+              disabled={!uploadedImage || !prompt.trim() || isLoading || credits < editCost}
               className={cn(
                 'group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl py-4 text-base font-bold transition-all',
-                !uploadedImage || !prompt.trim() || isLoading
+                !uploadedImage || !prompt.trim() || isLoading || credits < editCost
                   ? 'cursor-not-allowed bg-secondary text-muted-foreground'
                   : 'gradient-amber text-black hover:glow-amber',
               )}
@@ -215,10 +232,20 @@ export function EditorView() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Editing image...
                 </>
+              ) : credits < editCost ? (
+                <>
+                  <Zap className="h-5 w-5" />
+                  Not enough credits ({credits}/{editCost})
+                </>
               ) : (
                 <>
                   <Wand2 className="h-5 w-5" />
                   Edit Image
+                  {editCost > 0 && (
+                    <span className="ml-1 flex items-center gap-0.5 rounded-md bg-black/20 px-1.5 py-0.5 text-xs font-medium">
+                      <Zap className="h-3 w-3" />{editCost}
+                    </span>
+                  )}
                 </>
               )}
             </button>

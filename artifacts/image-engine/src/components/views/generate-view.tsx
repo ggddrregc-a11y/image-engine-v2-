@@ -19,6 +19,7 @@ import {
   Layers,
   Clock,
   Cpu,
+  Zap,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/components/providers/app-provider';
@@ -57,6 +58,9 @@ export function GenerateView() {
     setSampler,
     batchCount,
     setBatchCount,
+    credits,
+    deductCredits,
+    generateCost,
   } = useApp();
   const { toast } = useToast();
   const [quality, setQuality] = useState<'turbo' | 'standard' | 'high'>('standard');
@@ -128,6 +132,16 @@ export function GenerateView() {
     }
 
     if (jobs.some((j) => j.status === 'running' || j.status === 'queued')) return;
+
+    // Check credits before proceeding
+    if (credits < generateCost) {
+      toast({
+        title: 'Insufficient credits',
+        description: `You need ${generateCost} credits to generate an image. You have ${credits}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Find the selected workflow from state (already fetched client-side)
     const workflow = savedWorkflows.find((w) => w.id === selectedWorkflowId);
@@ -207,6 +221,9 @@ export function GenerateView() {
       const result = await response.json();
       console.log('[generate] ComfyUI response:', JSON.stringify(result, null, 2));
       if (result?.ok && result?.imageUrl) {
+        // Deduct credits on success
+        deductCredits(generateCost);
+
         // Show the generated image
         setGeneratedImage(result.imageUrl);
         setDownloadUrl(result.downloadUrl ?? result.imageUrl);
@@ -612,10 +629,10 @@ export function GenerateView() {
           <div className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm">
             <button
               onClick={handleGenerate}
-              disabled={!prompt.trim() || !!activeJob}
+              disabled={!prompt.trim() || !!activeJob || credits < generateCost}
               className={cn(
                 'group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl py-4 text-base font-bold transition-all',
-                activeJob
+                activeJob || credits < generateCost
                   ? 'cursor-not-allowed bg-secondary text-muted-foreground'
                   : 'gradient-amber text-black hover:glow-amber',
               )}
@@ -625,10 +642,20 @@ export function GenerateView() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Generating...
                 </>
+              ) : credits < generateCost ? (
+                <>
+                  <Zap className="h-5 w-5" />
+                  Not enough credits ({credits}/{generateCost})
+                </>
               ) : (
                 <>
                   <Sparkles className="h-5 w-5" />
                   Generate
+                  {generateCost > 0 && (
+                    <span className="ml-1 flex items-center gap-0.5 rounded-md bg-black/20 px-1.5 py-0.5 text-xs font-medium">
+                      <Zap className="h-3 w-3" />{generateCost}
+                    </span>
+                  )}
                 </>
               )}
             </button>
