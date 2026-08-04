@@ -81,56 +81,12 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Workspace selector */}
-      <div className="relative shrink-0">
-        <button
-          onClick={() => setWsOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-xl border border-border bg-card/50 px-2.5 py-2 text-sm font-medium transition-colors hover:border-primary/40 hover:bg-card sm:px-3"
-        >
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-amber text-xs font-bold text-black">
-            {WORKSPACES[wsIndex][0]}
-          </span>
-          <span className="hidden md:inline">{WORKSPACES[wsIndex]}</span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </button>
-        <AnimatePresence>
-          {wsOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setWsOpen(false)}
-              />
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="absolute left-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-2xl"
-              >
-                {WORKSPACES.map((ws, i) => (
-                  <button
-                    key={ws}
-                    onClick={() => {
-                      setWsIndex(i);
-                      setWsOpen(false);
-                    }}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-                      i === wsIndex
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-foreground hover:bg-secondary',
-                    )}
-                  >
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-secondary text-xs font-bold">
-                      {ws[0]}
-                    </span>
-                    {ws}
-                  </button>
-                ))}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+      {/* Site name */}
+      <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-amber text-xs font-bold text-black">
+          IE
+        </span>
+        <span className="hidden text-sm font-medium md:inline">Image Engine</span>
       </div>
 
       {/* Search */}
