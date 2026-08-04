@@ -138,7 +138,7 @@ router.get("/comfy/image", async (req, res) => {
     }
     const contentType = imgRes.headers.get("content-type") ?? "image/png";
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Disposition", `attachment; filename="z-image-${Date.now()}.png"`);
     const buffer = await imgRes.arrayBuffer();
     return res.send(Buffer.from(buffer));
   } catch (err) {

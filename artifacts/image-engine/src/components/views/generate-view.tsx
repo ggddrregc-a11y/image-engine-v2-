@@ -748,7 +748,7 @@ export function GenerateView() {
                       </button>
                       <a
                         href={downloadUrl ?? generatedImage ?? ''}
-                        download="generated.png"
+                        download={`z-image-${Date.now()}.png`}
                         className="flex items-center gap-1.5 rounded-lg bg-black/40 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/60"
                       >
                         <Download className="h-3.5 w-3.5" />
@@ -850,7 +850,7 @@ export function GenerateView() {
             >
               <a
                 href={downloadUrl ?? generatedImage}
-                download="generated.png"
+                download={`z-image-${Date.now()}.png`}
                 className="flex items-center gap-2 rounded-xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20"
               >
                 <Download className="h-4 w-4" />

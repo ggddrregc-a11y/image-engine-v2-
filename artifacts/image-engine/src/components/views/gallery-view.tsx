@@ -260,7 +260,7 @@ function GalleryCard({
             </button>
             <a
               href={img.url}
-              download="image.png"
+              download={`z-image-${new Date(img.created_at).getTime()}.png`}
               onClick={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/60 text-white backdrop-blur transition-colors hover:bg-background"
               title="Download"
@@ -356,7 +356,7 @@ function Lightbox({
             </button>
             <a
               href={image.url}
-              download="image.png"
+              download={`z-image-${new Date(image.created_at).getTime()}.png`}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground"
             >
               <Download className="h-4 w-4" />
