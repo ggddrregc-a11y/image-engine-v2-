@@ -32,12 +32,24 @@ export function SettingsView() {
   const [section, setSection] = useState<SectionId>('profile');
   const { theme, setTheme } = useTheme();
   const { locale, setLocale } = useApp();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarInitials] = useState('AK');
   const [notifications, setNotifications] = useState({
     generationComplete: true,
     modelUpdates: true,
     creditAlerts: false,
     productNews: false,
   });
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) setAvatarUrl(ev.target.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <PageContainer>
@@ -81,12 +93,38 @@ export function SettingsView() {
             <div className="space-y-5">
               <h3 className="font-display text-lg font-bold">{t(locale, 'settings.section.profile')}</h3>
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-amber text-xl font-bold text-black">
-                  AK
+                <div className="relative h-16 w-16">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="h-16 w-16 rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-amber text-xl font-bold text-black">
+                      {avatarInitials}
+                    </div>
+                  )}
                 </div>
-                <button className="rounded-xl border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30">
-                  Change Avatar
-                </button>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer rounded-xl border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30">
+                    Change Avatar
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                  </label>
+                  {avatarUrl && (
+                    <button
+                      onClick={() => setAvatarUrl(null)}
+                      className="rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
               <Field label={t(locale, 'settings.profile.displayName')} value="Alex Kim" />
               <Field label={t(locale, 'settings.profile.email')} value="alex@lumen.ai" />
