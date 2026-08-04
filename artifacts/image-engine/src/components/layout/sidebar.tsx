@@ -47,13 +47,22 @@ export function Sidebar({
   const [editorEnabled, setEditorEnabled] = useState(false);
 
   useEffect(() => {
-    // جيب الـ setting الأول
+    let cancelled = false;
+
+    // جيب الـ setting الأول مع timeout عشان ما يتعلقش
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
     supabase
       .from('feature_settings')
       .select('enabled')
       .eq('id', 'image_editor')
       .maybeSingle()
-      .then(({ data }) => { if (data) setEditorEnabled(data.enabled); });
+      .then(({ data }) => {
+        clearTimeout(timeout);
+        if (!cancelled && data) setEditorEnabled(data.enabled);
+      })
+      .catch(() => { clearTimeout(timeout); });
 
     // اشترك في التغييرات الفورية
     const channel = supabase
@@ -65,11 +74,15 @@ export function Sidebar({
         filter: 'id=eq.image_editor',
       }, (payload) => {
         const newData = payload.new as { enabled: boolean } | null;
-        if (newData) setEditorEnabled(newData.enabled);
+        if (!cancelled && newData) setEditorEnabled(newData.enabled);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const navItems = [
