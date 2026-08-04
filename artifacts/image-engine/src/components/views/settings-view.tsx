@@ -17,6 +17,19 @@ import { useTheme } from 'next-themes';
 import { useApp } from '@/components/providers/app-provider';
 import { t } from '@/lib/i18n';
 
+const AVATARS = [
+  { id: 'a1', bg: 'from-violet-500 to-purple-600', initials: '🎨' },
+  { id: 'a2', bg: 'from-amber-400 to-orange-500', initials: '⚡' },
+  { id: 'a3', bg: 'from-cyan-400 to-blue-500', initials: '🌊' },
+  { id: 'a4', bg: 'from-emerald-400 to-green-500', initials: '🌿' },
+  { id: 'a5', bg: 'from-rose-400 to-pink-500', initials: '🌸' },
+  { id: 'a6', bg: 'from-slate-400 to-gray-600', initials: '🤖' },
+  { id: 'a7', bg: 'from-yellow-400 to-amber-500', initials: '⭐' },
+  { id: 'a8', bg: 'from-indigo-400 to-violet-500', initials: '🔮' },
+  { id: 'a9', bg: 'from-teal-400 to-cyan-500', initials: '💎' },
+  { id: 'a10', bg: 'from-red-400 to-rose-500', initials: '🔥' },
+];
+
 const SECTIONS = [
   { id: 'profile', labelKey: 'settings.section.profile', icon: User },
   { id: 'appearance', labelKey: 'settings.section.appearance', icon: Palette },
@@ -32,24 +45,14 @@ export function SettingsView() {
   const [section, setSection] = useState<SectionId>('profile');
   const { theme, setTheme } = useTheme();
   const { locale, setLocale } = useApp();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarInitials] = useState('AK');
+  const [selectedAvatar, setSelectedAvatar] = useState('a1');
+  const [savedAvatar, setSavedAvatar] = useState('a1');
   const [notifications, setNotifications] = useState({
     generationComplete: true,
     modelUpdates: true,
     creditAlerts: false,
     productNews: false,
   });
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (ev.target?.result) setAvatarUrl(ev.target.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
 
   return (
     <PageContainer>
@@ -92,44 +95,48 @@ export function SettingsView() {
           {section === 'profile' && (
             <div className="space-y-5">
               <h3 className="font-display text-lg font-bold">{t(locale, 'settings.section.profile')}</h3>
+
+              {/* Current avatar */}
               <div className="flex items-center gap-4">
-                <div className="relative h-16 w-16">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="h-16 w-16 rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-amber text-xl font-bold text-black">
-                      {avatarInitials}
-                    </div>
-                  )}
+                <AvatarDisplay avatar={AVATARS.find((a) => a.id === savedAvatar)!} size="lg" />
+                <div>
+                  <p className="text-sm font-medium">Profile Avatar</p>
+                  <p className="text-xs text-muted-foreground">Choose from the avatars below</p>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="cursor-pointer rounded-xl border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30">
-                    Change Avatar
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                  </label>
-                  {avatarUrl && (
+              </div>
+
+              {/* Avatar picker */}
+              <div>
+                <p className="mb-3 text-sm font-medium">Choose Avatar</p>
+                <div className="flex flex-wrap gap-3">
+                  {AVATARS.map((avatar) => (
                     <button
-                      onClick={() => setAvatarUrl(null)}
-                      className="rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                      key={avatar.id}
+                      onClick={() => setSelectedAvatar(avatar.id)}
+                      className={cn(
+                        'relative h-14 w-14 rounded-2xl transition-all',
+                        selectedAvatar === avatar.id
+                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-110'
+                          : 'opacity-70 hover:opacity-100 hover:scale-105',
+                      )}
                     >
-                      Remove
+                      <AvatarDisplay avatar={avatar} size="md" />
+                      {selectedAvatar === avatar.id && (
+                        <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+                          <Check className="h-3 w-3 text-black" />
+                        </div>
+                      )}
                     </button>
-                  )}
+                  ))}
                 </div>
               </div>
               <Field label={t(locale, 'settings.profile.displayName')} value="Alex Kim" />
               <Field label={t(locale, 'settings.profile.email')} value="alex@lumen.ai" />
               <Field label={t(locale, 'settings.profile.username')} value="@alexkim" />
-              <button className="rounded-xl gradient-amber px-4 py-2.5 text-sm font-semibold text-black transition-all hover:glow-amber">
+              <button
+                onClick={() => setSavedAvatar(selectedAvatar)}
+                className="rounded-xl gradient-amber px-4 py-2.5 text-sm font-semibold text-black transition-all hover:glow-amber"
+              >
                 {t(locale, 'settings.profile.saveChanges')}
               </button>
             </div>
@@ -279,6 +286,15 @@ export function SettingsView() {
         </motion.div>
       </div>
     </PageContainer>
+  );
+}
+
+function AvatarDisplay({ avatar, size = 'md' }: { avatar: typeof AVATARS[0]; size?: 'md' | 'lg' }) {
+  const sizeClass = size === 'lg' ? 'h-16 w-16 text-2xl' : 'h-14 w-14 text-xl';
+  return (
+    <div className={cn('flex items-center justify-center rounded-2xl bg-gradient-to-br', sizeClass, avatar.bg)}>
+      {avatar.initials}
+    </div>
   );
 }
 
