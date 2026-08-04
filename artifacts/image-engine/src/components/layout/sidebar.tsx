@@ -65,7 +65,7 @@ export function Sidebar({
 
     // اشترك في التغييرات الفورية
     const channel = supabase
-      .channel('feature_settings_changes')
+      .channel(`feature_settings_changes_${Date.now()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
