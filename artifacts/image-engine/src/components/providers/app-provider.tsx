@@ -5,6 +5,7 @@ import type { Locale } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 const CREDITS_KEY = 'ie_credits';
+const AVATAR_KEY = 'ie_avatar';
 const DEFAULT_INITIAL_CREDITS = 100;
 
 interface AppContextValue {
@@ -35,6 +36,9 @@ interface AppContextValue {
   deductCredits: (amount: number) => boolean;
   generateCost: number;
   editCost: number;
+  // Avatar
+  avatarId: string;
+  setAvatarId: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -62,6 +66,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [credits, setCredits] = useState<number>(DEFAULT_INITIAL_CREDITS);
   const [generateCost, setGenerateCost] = useState(10);
   const [editCost, setEditCost] = useState(5);
+  const [avatarId, setAvatarIdState] = useState<string>('a1');
 
   // Load credits from localStorage on mount
   useEffect(() => {
@@ -70,6 +75,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCredits(parseInt(stored, 10));
     }
     // else: first visit — default 100 will be replaced after fetching settings
+  }, []);
+
+  // Load avatar from localStorage on mount
+  useEffect(() => {
+    const stored = window.localStorage.getItem(AVATAR_KEY);
+    if (stored) setAvatarIdState(stored);
   }, []);
 
   // Fetch credit settings from Supabase on mount
@@ -106,6 +117,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return prev - amount;
     });
     return success;
+  }, []);
+
+  const setAvatarId = useCallback((id: string) => {
+    setAvatarIdState(id);
+    window.localStorage.setItem(AVATAR_KEY, id);
   }, []);
 
   useEffect(() => {
@@ -161,6 +177,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deductCredits,
         generateCost,
         editCost,
+        avatarId,
+        setAvatarId,
       }}
     >
       {children}

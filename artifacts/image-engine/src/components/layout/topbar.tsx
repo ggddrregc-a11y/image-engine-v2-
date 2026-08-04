@@ -32,8 +32,21 @@ const PROFILE_FOOTER = [
   { icon: BookOpen, labelKey: 'topbar.documentation' },
 ] as const;
 
+const AVATAR_MAP: Record<string, { bg: string; emoji: string }> = {
+  a1: { bg: 'from-violet-500 to-purple-600', emoji: '🎨' },
+  a2: { bg: 'from-amber-400 to-orange-500', emoji: '⚡' },
+  a3: { bg: 'from-cyan-400 to-blue-500', emoji: '🌊' },
+  a4: { bg: 'from-emerald-400 to-green-500', emoji: '🌿' },
+  a5: { bg: 'from-rose-400 to-pink-500', emoji: '🌸' },
+  a6: { bg: 'from-slate-400 to-gray-600', emoji: '🤖' },
+  a7: { bg: 'from-yellow-400 to-amber-500', emoji: '⭐' },
+  a8: { bg: 'from-indigo-400 to-violet-500', emoji: '🔮' },
+  a9: { bg: 'from-teal-400 to-cyan-500', emoji: '💎' },
+  a10: { bg: 'from-red-400 to-rose-500', emoji: '🔥' },
+};
+
 export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const { setActiveView, locale, setLocale, credits } = useApp();
+  const { setActiveView, locale, setLocale, credits, avatarId } = useApp();
   const [wsOpen, setWsOpen] = useState(false);
   const [wsIndex, setWsIndex] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -203,8 +216,8 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             )}
             aria-label="Open profile menu"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-amber text-xs font-bold text-black">
-              AK
+            <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br text-sm', AVATAR_MAP[avatarId]?.bg ?? 'from-amber-400 to-orange-500')}>
+              {AVATAR_MAP[avatarId]?.emoji ?? '⚡'}
             </div>
             <div className="hidden text-left leading-none lg:block">
               <p className="text-xs font-semibold">Alex Kim</p>
@@ -229,8 +242,8 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
               >
                 {/* User header */}
                 <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-amber text-sm font-bold text-black">
-                    AK
+                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-lg', AVATAR_MAP[avatarId]?.bg ?? 'from-amber-400 to-orange-500')}>
+                    {AVATAR_MAP[avatarId]?.emoji ?? '⚡'}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">Alex Kim</p>

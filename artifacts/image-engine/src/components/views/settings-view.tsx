@@ -44,9 +44,9 @@ type SectionId = (typeof SECTIONS)[number]['id'];
 export function SettingsView() {
   const [section, setSection] = useState<SectionId>('profile');
   const { theme, setTheme } = useTheme();
-  const { locale, setLocale } = useApp();
-  const [selectedAvatar, setSelectedAvatar] = useState('a1');
-  const [savedAvatar, setSavedAvatar] = useState('a1');
+  const { locale, setLocale, avatarId, setAvatarId } = useApp();
+  const [selectedAvatar, setSelectedAvatar] = useState(avatarId);
+  const [savedAvatar, setSavedAvatar] = useState(avatarId);
   const [notifications, setNotifications] = useState({
     generationComplete: true,
     modelUpdates: true,
@@ -134,7 +134,10 @@ export function SettingsView() {
               <Field label={t(locale, 'settings.profile.email')} value="alex@lumen.ai" />
               <Field label={t(locale, 'settings.profile.username')} value="@alexkim" />
               <button
-                onClick={() => setSavedAvatar(selectedAvatar)}
+                onClick={() => {
+                  setSavedAvatar(selectedAvatar);
+                  setAvatarId(selectedAvatar);
+                }}
                 className="rounded-xl gradient-amber px-4 py-2.5 text-sm font-semibold text-black transition-all hover:glow-amber"
               >
                 {t(locale, 'settings.profile.saveChanges')}
