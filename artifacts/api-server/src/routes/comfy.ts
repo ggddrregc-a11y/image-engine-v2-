@@ -81,8 +81,9 @@ router.post("/comfy/generate", async (req, res) => {
         if (node.images && node.images.length > 0) {
           const img = node.images[0];
           const imageUrl = `${base}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${encodeURIComponent(img.type)}`;
+          const downloadUrl = `/api/comfy/image?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${encodeURIComponent(img.type)}`;
           req.log.info({ imageUrl }, "[comfy/generate] image ready");
-          return res.json({ ok: true, promptId, imageUrl });
+          return res.json({ ok: true, promptId, imageUrl, downloadUrl });
         }
       }
     }
@@ -113,6 +114,33 @@ router.get("/comfy/check", async (req, res) => {
     }
     const text = await comfyRes.text();
     return res.status(comfyRes.ok ? 200 : 502).json({ ok: comfyRes.ok, data: text });
+  } catch (err) {
+    return res.status(502).json({ error: String(err) });
+  }
+});
+
+router.get("/comfy/image", async (req, res) => {
+  const base = getBase();
+  if (!base) {
+    return res.status(500).json({ error: "COMFYUI_BASE_URL is not configured" });
+  }
+
+  const { filename, subfolder, type } = req.query as Record<string, string>;
+  if (!filename) {
+    return res.status(400).json({ error: "filename is required" });
+  }
+
+  try {
+    const url = `${base}/view?filename=${encodeURIComponent(filename)}&subfolder=${encodeURIComponent(subfolder ?? "")}&type=${encodeURIComponent(type ?? "output")}`;
+    const imgRes = await fetch(url);
+    if (!imgRes.ok) {
+      return res.status(502).json({ error: `ComfyUI returned ${imgRes.status}` });
+    }
+    const contentType = imgRes.headers.get("content-type") ?? "image/png";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    const buffer = await imgRes.arrayBuffer();
+    res.send(Buffer.from(buffer));
   } catch (err) {
     return res.status(502).json({ error: String(err) });
   }
