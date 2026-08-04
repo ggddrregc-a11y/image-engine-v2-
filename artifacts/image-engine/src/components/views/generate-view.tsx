@@ -89,28 +89,21 @@ export function GenerateView() {
     fetchWorkflows();
   }, [setSelectedModel]);
 
-  // Simulate generation progress
+  // Keep job in running state while waiting — no fake progress simulation
   useEffect(() => {
     if (jobs.length === 0) return;
     const running = jobs.find((j) => j.status === 'running' || j.status === 'queued');
     if (!running) return;
 
-    const interval = setInterval(() => {
+    // Just transition from queued to running, no progress increment
+    const timeout = setTimeout(() => {
       setJobs((prev) =>
-        prev.map((j) => {
-          if (j.status !== 'running' && j.status !== 'queued') return j;
-          if (j.status === 'queued') {
-            return { ...j, status: 'running', startedAt: new Date().toISOString() };
-          }
-          const next = Math.min(100, j.progress + Math.random() * 12 + 5);
-          if (next >= 100) {
-            return { ...j, status: 'complete', progress: 100 };
-          }
-          return { ...j, progress: next };
-        }),
+        prev.map((j) =>
+          j.status === 'queued' ? { ...j, status: 'running' } : j,
+        ),
       );
-    }, 400);
-    return () => clearInterval(interval);
+    }, 800);
+    return () => clearTimeout(timeout);
   }, [jobs]);
 
   const handleGenerate = async () => {
@@ -653,18 +646,14 @@ export function GenerateView() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5 font-medium text-primary">
                       <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                      {activeJob.status === 'queued' ? 'Queued' : 'Running'}
+                      {activeJob.status === 'queued' ? 'Queued...' : 'Generating...'}
                     </span>
-                    <span className="font-semibold tabular-nums">
-                      {Math.round(activeJob.progress)}%
+                    <span className="font-semibold tabular-nums text-muted-foreground">
+                      waiting
                     </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <motion.div
-                      className="h-full rounded-full gradient-amber"
-                      animate={{ width: `${activeJob.progress}%` }}
-                      transition={{ ease: 'easeOut' }}
-                    />
+                    <div className="h-full w-full animate-pulse rounded-full gradient-amber opacity-70" />
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">
@@ -737,7 +726,7 @@ export function GenerateView() {
                   <div className="relative z-10 flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <span className="text-xs text-muted-foreground">
-                      Rendering... {Math.round(activeJob.progress)}%
+                      Generating your image...
                     </span>
                   </div>
                 </div>
