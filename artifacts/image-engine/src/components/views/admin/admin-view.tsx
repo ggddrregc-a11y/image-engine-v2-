@@ -53,6 +53,7 @@ const SUB_PAGES: {
 }[] = [
   { id: 'providers', label: 'AI Providers', icon: Server, description: 'Manage AI generation backends' },
   { id: 'comfyui', label: 'ComfyUI', icon: Workflow, description: 'ComfyUI server & workflow configuration' },
+  { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
   { id: 'models', label: 'Models', icon: Boxes, description: 'Model definitions and defaults' },
   { id: 'templates', label: 'Prompt Templates', icon: FileText, description: 'Reusable prompt library' },
   { id: 'gen-settings', label: 'Generation Settings', icon: SlidersHorizontal, description: 'Global generation defaults' },
@@ -60,7 +61,6 @@ const SUB_PAGES: {
   { id: 'storage', label: 'Storage', icon: HardDrive, description: 'Generated image library' },
   { id: 'users', label: 'User Management', icon: Users, description: 'Roles and permissions' },
   { id: 'logs', label: 'System Logs', icon: ScrollText, description: 'API, generation, and error logs' },
-  { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
 ];
 
 export function AdminView() {
