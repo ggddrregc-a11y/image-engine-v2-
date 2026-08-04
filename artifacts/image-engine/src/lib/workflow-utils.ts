@@ -1,6 +1,9 @@
 const clampCfg = (value: number) => Math.min(20, Math.max(1, value));
-const resolveQualitySteps = (quality: 'standard' | 'high') =>
-  quality === 'high' ? 40 : 20;
+const resolveQualitySteps = (quality: 'turbo' | 'standard' | 'high') => {
+  if (quality === 'turbo') return 4;
+  if (quality === 'high') return 12;
+  return 8; // standard — optimal for Z-Image Turbo
+};
 const generateSeed = () => Math.floor(Math.random() * 0x7fffffff);
 
 /**
@@ -11,7 +14,7 @@ export function patchWorkflow(
   workflowJson: Record<string, unknown>,
   width: number,
   height: number,
-  quality: 'standard' | 'high',
+  quality: 'turbo' | 'standard' | 'high',
   promptText: string,
   cfg = 7,
   steps?: number,

@@ -58,7 +58,7 @@ export function GenerateView() {
     setBatchCount,
   } = useApp();
   const { toast } = useToast();
-  const [quality, setQuality] = useState<'standard' | 'high'>('standard');
+  const [quality, setQuality] = useState<'turbo' | 'standard' | 'high'>('standard');
   const [savedWorkflows, setSavedWorkflows] = useState<ComfyUIWorkflow[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
 
@@ -519,18 +519,23 @@ export function GenerateView() {
                       Quality
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {(['standard', 'high'] as const).map((q) => (
+                      {([
+                        { value: 'turbo', label: 'Turbo', hint: '4 steps' },
+                        { value: 'standard', label: 'Standard', hint: '8 steps' },
+                        { value: 'high', label: 'HD', hint: '12 steps' },
+                      ] as const).map((q) => (
                         <button
-                          key={q}
-                          onClick={() => setQuality(q)}
+                          key={q.value}
+                          onClick={() => setQuality(q.value)}
                           className={cn(
-                            'rounded-xl border px-3 py-2 text-xs font-medium capitalize transition-all',
-                            quality === q
+                            'flex flex-col items-center rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                            quality === q.value
                               ? 'border-primary/40 bg-primary/10 text-primary'
                               : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
                           )}
                         >
-                          {q === 'high' ? 'HD' : 'Standard'}
+                          <span>{q.label}</span>
+                          <span className="text-[10px] opacity-60">{q.hint}</span>
                         </button>
                       ))}
                     </div>
