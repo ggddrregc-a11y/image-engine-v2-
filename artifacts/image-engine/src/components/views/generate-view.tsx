@@ -12,6 +12,7 @@ import {
   Loader2,
   RotateCcw,
   Download,
+  Share2,
   Check,
   ChevronDown,
   ChevronUp,
@@ -69,6 +70,7 @@ export function GenerateView() {
   const [recentResults, setRecentResults] = useState(SAMPLE_IMAGES.slice(0, 4));
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load saved workflows so their models appear in the UI
@@ -495,24 +497,6 @@ export function GenerateView() {
                     </div>
                   </div>
 
-                  {/* Steps */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Steps
-                      </label>
-                      <span className="text-sm font-semibold tabular-nums">{steps}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={60}
-                      value={steps}
-                      onChange={(e) => setSteps(Number(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
-                    />
-                  </div>
-
                   {/* Quality */}
                   <div>
                     <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -539,27 +523,6 @@ export function GenerateView() {
                         </button>
                       ))}
                     </div>
-                  </div>
-
-                  {/* CFG Scale */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        CFG Scale
-                      </label>
-                      <span className="text-sm font-semibold tabular-nums">
-                        {cfgScale.toFixed(1)}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={20}
-                      step={0.5}
-                      value={cfgScale}
-                      onChange={(e) => setCfgScale(Number(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
-                    />
                   </div>
 
                   {/* Sampler */}
@@ -744,12 +707,20 @@ export function GenerateView() {
                   <img
                     src={generatedImage}
                     alt="Generated image"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full cursor-zoom-in object-cover transition-transform hover:scale-105"
+                    onClick={() => setLightboxOpen(true)}
                   />
                   <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity hover:opacity-100">
-                    <div className="flex w-full items-center justify-between p-3">
+                    <div className="flex w-full items-center gap-2 p-3">
+                      <button
+                        onClick={() => setLightboxOpen(true)}
+                        className="flex items-center gap-1.5 rounded-lg bg-black/40 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        View
+                      </button>
                       <a
-                        href={downloadUrl ?? generatedImage}
+                        href={downloadUrl ?? generatedImage ?? ''}
                         download="generated.png"
                         className="flex items-center gap-1.5 rounded-lg bg-black/40 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/60"
                       >
@@ -812,5 +783,70 @@ export function GenerateView() {
         </div>
       </div>
     </PageContainer>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && generatedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setLightboxOpen(false)}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Image */}
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={generatedImage}
+              alt="Generated image"
+              className="max-h-[80vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Actions bar */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              className="mt-6 flex items-center gap-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <a
+                href={downloadUrl ?? generatedImage}
+                download="generated.png"
+                className="flex items-center gap-2 rounded-xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </a>
+              <button
+                onClick={async () => {
+                  try {
+                    if (navigator.share) {
+                      await navigator.share({ url: generatedImage, title: 'Generated Image' });
+                    } else {
+                      await navigator.clipboard.writeText(generatedImage);
+                    }
+                  } catch { /* ignore */ }
+                }}
+                className="flex items-center gap-2 rounded-xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
   );
 }
