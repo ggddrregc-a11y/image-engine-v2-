@@ -16,8 +16,8 @@ import {
   Globe,
   LifeBuoy,
   BookOpen,
-  LogOut,
   Settings,
+  Check,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,11 +33,12 @@ const PROFILE_FOOTER = [
 ] as const;
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
-  const { setActiveView, locale } = useApp();
+  const { setActiveView, locale, setLocale } = useApp();
   const [wsOpen, setWsOpen] = useState(false);
   const [wsIndex, setWsIndex] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { logout: adminLogout } = useAdminAuth();
   const profileRef = useRef<HTMLDivElement>(null);
@@ -49,13 +50,13 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
   ];
 
   const PROFILE_MENU = [
-    { icon: User, label: t(locale, 'profile.myProfile'), view: 'settings' as const },
-    { icon: CreditCard, label: t(locale, 'profile.billing'), view: 'settings' as const },
-    { icon: KeyRound, label: t(locale, 'profile.apiKeys'), view: 'api' as const },
-    { icon: BellRing, label: t(locale, 'profile.notifications'), view: 'settings' as const },
-    { icon: Shield, label: t(locale, 'profile.security'), view: 'settings' as const },
-    { icon: Palette, label: t(locale, 'profile.appearance'), view: 'settings' as const },
-    { icon: Globe, label: t(locale, 'profile.language'), view: 'settings' as const },
+    { icon: User, label: t(locale, 'profile.myProfile'), view: 'settings' as const, action: null },
+    { icon: CreditCard, label: t(locale, 'profile.billing'), view: 'settings' as const, action: null },
+    { icon: KeyRound, label: t(locale, 'profile.apiKeys'), view: 'api' as const, action: null },
+    { icon: BellRing, label: t(locale, 'profile.notifications'), view: 'settings' as const, action: null },
+    { icon: Shield, label: t(locale, 'profile.security'), view: 'settings' as const, action: null },
+    { icon: Palette, label: t(locale, 'profile.appearance'), view: 'settings' as const, action: null },
+    { icon: Globe, label: t(locale, 'profile.language'), view: null, action: () => setLangOpen((v) => !v) },
   ] as const;
 
   // Close profile menu on outside click
@@ -288,17 +289,46 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
                   {PROFILE_MENU.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <button
-                        key={item.label}
-                        onClick={() => {
-                          setActiveView(item.view);
-                          setProfileOpen(false);
-                        }}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        {item.label}
-                      </button>
+                      <div key={item.label}>
+                        <button
+                          onClick={() => {
+                            if (item.action) {
+                              item.action();
+                            } else if (item.view) {
+                              setActiveView(item.view);
+                              setProfileOpen(false);
+                            }
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
+                        >
+                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          {item.label}
+                          {item.action && (
+                            <ChevronDown className={cn('ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform', langOpen && item.icon === Globe && 'rotate-180')} />
+                          )}
+                        </button>
+
+                        {/* Language submenu inline */}
+                        {item.icon === Globe && langOpen && (
+                          <div className="mx-2 mb-1 overflow-hidden rounded-lg border border-border bg-secondary/50">
+                            {(['en', 'ar'] as const).map((lang) => (
+                              <button
+                                key={lang}
+                                onClick={() => {
+                                  setLocale(lang);
+                                  setLangOpen(false);
+                                  setProfileOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-secondary"
+                              >
+                                <span className="text-base">{lang === 'en' ? '🇬🇧' : '🇸🇦'}</span>
+                                <span>{lang === 'en' ? t(locale, 'settings.language.english') : t(locale, 'settings.language.arabic')}</span>
+                                {locale === lang && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -321,24 +351,6 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
                       </button>
                     );
                   })}
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-border" />
-
-                {/* Sign out */}
-                <div className="p-1">
-                  <button
-                    onClick={() => {
-                      adminLogout();
-                      setProfileOpen(false);
-                      setActiveView('generate');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-                  >
-                    <LogOut className="h-4 w-4 shrink-0" />
-                    Sign Out
-                  </button>
                 </div>
               </motion.div>
             )}
