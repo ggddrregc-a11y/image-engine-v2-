@@ -164,7 +164,7 @@ export function EditorView() {
                 className="min-h-[100px] w-full resize-none bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/60"
               />
               <div className="flex items-center justify-between border-t border-border px-4 py-2">
-                <span className="text-xs text-muted-foreground">{prompt.length} chars</span>
+                <span className="text-xs text-muted-foreground">{prompt.length} / 5000 chars</span>
                 {prompt && (
                   <button onClick={() => setPrompt('')} className="text-xs text-muted-foreground hover:text-foreground">
                     Clear

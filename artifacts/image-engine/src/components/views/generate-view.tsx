@@ -37,7 +37,7 @@ import {
 import type { GenerationJob } from '@/lib/types';
 import type { ComfyUIWorkflow } from '@/lib/admin-types';
 
-const MAX_CHARS = 1000;
+const MAX_CHARS = 5000;
 
 export function GenerateView() {
   const {
