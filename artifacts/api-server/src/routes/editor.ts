@@ -1,7 +1,10 @@
 import { Router } from "express";
-import { logger } from "../lib/logger";
+import { Agent } from "https";
 
 const router = Router();
+
+// Bypass SSL verification — matches behavior of the Python bot (verify=False)
+const insecureAgent = new Agent({ rejectUnauthorized: false });
 
 /**
  * POST /api/edit
@@ -70,17 +73,18 @@ router.post("/edit", async (req, res) => {
     if (width) payload.width = width;
     if (height) payload.height = height;
 
+    const jsonBody = JSON.stringify(payload);
+
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "https://viscodev.x10.mx",
-        "Referer": "https://viscodev.x10.mx/",
+        "Content-Length": Buffer.byteLength(jsonBody).toString(),
       },
-      body: JSON.stringify(payload),
+      body: jsonBody,
+      // @ts-ignore — Node 18+ supports agent
+      agent: insecureAgent,
+      signal: AbortSignal.timeout(120000),
     });
 
     if (!response.ok) {
