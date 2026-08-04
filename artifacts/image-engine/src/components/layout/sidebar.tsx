@@ -58,11 +58,10 @@ export function Sidebar({
       .select('enabled')
       .eq('id', 'image_editor')
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         clearTimeout(timeout);
-        if (!cancelled && data) setEditorEnabled(data.enabled);
-      })
-      .catch(() => { clearTimeout(timeout); });
+        if (!cancelled && !error && data) setEditorEnabled(data.enabled);
+      });
 
     // اشترك في التغييرات الفورية
     const channel = supabase
