@@ -47,12 +47,29 @@ export function Sidebar({
   const [editorEnabled, setEditorEnabled] = useState(false);
 
   useEffect(() => {
+    // جيب الـ setting الأول
     supabase
       .from('feature_settings')
       .select('enabled')
       .eq('id', 'image_editor')
       .maybeSingle()
       .then(({ data }) => { if (data) setEditorEnabled(data.enabled); });
+
+    // اشترك في التغييرات الفورية
+    const channel = supabase
+      .channel('feature_settings_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'feature_settings',
+        filter: 'id=eq.image_editor',
+      }, (payload) => {
+        const newData = payload.new as { enabled: boolean } | null;
+        if (newData) setEditorEnabled(newData.enabled);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const navItems = [
