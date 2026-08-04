@@ -87,7 +87,7 @@ router.post("/edit", async (req, res) => {
       const blob = new Blob([buffer], { type: "image/png" });
       formData.append("file", blob, "image.png");
 
-      const uploadRes = await fetch("https://tmpfiles.org/api/v1/upload", {
+      const uploadRes = await fetch("https://0x0.st", {
         method: "POST",
         body: formData,
       });
@@ -96,13 +96,12 @@ router.post("/edit", async (req, res) => {
         return res.status(502).json({ ok: false, error: "Failed to upload image for processing" });
       }
 
-      const uploadData = await uploadRes.json() as { data?: { url?: string } };
-      const tmpUrl = uploadData?.data?.url;
-      if (!tmpUrl) {
+      resolvedImageUrl = (await uploadRes.text()).trim();
+      if (!resolvedImageUrl.startsWith("http")) {
         return res.status(502).json({ ok: false, error: "Failed to get upload URL" });
       }
 
-      resolvedImageUrl = tmpUrl.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+      req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to 0x0.st");
       req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to temp host");
     }
 
