@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Images,
@@ -13,25 +13,38 @@ import {
   Search,
   LayoutGrid,
   Rows3,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '@/components/providers/app-provider';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
-import { SAMPLE_IMAGES } from '@/lib/mock-data';
-import type { GeneratedImage } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import type { StoredImage } from '@/lib/admin-types';
 
 export function GalleryView() {
-  const { favorites, toggleFavorite, setPrompt, setActiveView } = useApp();
+  const { setPrompt, setActiveView } = useApp();
+  const [images, setImages] = useState<StoredImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'favorites'>('all');
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<GeneratedImage | null>(null);
+  const [selected, setSelected] = useState<StoredImage | null>(null);
 
-  const images = useMemo(() => {
-    let result = SAMPLE_IMAGES;
-    if (filter === 'favorites') {
-      result = result.filter((img) => favorites.has(img.id));
-    }
+  const fetchImages = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('stored_images')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (data) setImages(data as StoredImage[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchImages(); }, [fetchImages]);
+
+  const filtered = useMemo(() => {
+    let result = images;
+    if (filter === 'favorites') result = result.filter((img) => img.favorite);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -41,9 +54,20 @@ export function GalleryView() {
       );
     }
     return result;
-  }, [filter, search, favorites]);
+  }, [images, filter, search]);
 
-  const handleReuse = (img: GeneratedImage) => {
+  const toggleFavorite = async (img: StoredImage) => {
+    await supabase.from('stored_images').update({ favorite: !img.favorite }).eq('id', img.id);
+    setImages((prev) => prev.map((i) => i.id === img.id ? { ...i, favorite: !i.favorite } : i));
+  };
+
+  const deleteImage = async (id: string) => {
+    await supabase.from('stored_images').delete().eq('id', id);
+    setImages((prev) => prev.filter((i) => i.id !== id));
+    if (selected?.id === id) setSelected(null);
+  };
+
+  const handleReuse = (img: StoredImage) => {
     setPrompt(img.prompt);
     setActiveView('generate');
   };
@@ -52,7 +76,7 @@ export function GalleryView() {
     <PageContainer>
       <PageHeader
         title="Gallery"
-        description={`${images.length} images in your workspace`}
+        description={`${filtered.length} images in your workspace`}
         icon={Images}
         actions={
           <>
@@ -70,9 +94,7 @@ export function GalleryView() {
                 onClick={() => setLayout('masonry')}
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
-                  layout === 'masonry'
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground hover:text-foreground',
+                  layout === 'masonry' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -81,9 +103,7 @@ export function GalleryView() {
                 onClick={() => setLayout('grid')}
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
-                  layout === 'grid'
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground hover:text-foreground',
+                  layout === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Rows3 className="h-4 w-4" />
@@ -93,7 +113,6 @@ export function GalleryView() {
         }
       />
 
-      {/* Filter tabs */}
       <div className="mt-5 flex gap-2">
         {(['all', 'favorites'] as const).map((f) => (
           <button
@@ -112,21 +131,24 @@ export function GalleryView() {
         ))}
       </div>
 
-      {/* Masonry / Grid */}
-      {images.length === 0 ? (
+      {loading ? (
+        <div className="mt-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Loading gallery...</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="mt-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Images className="h-12 w-12 opacity-40" />
-          <p>No images found</p>
+          <p>{search ? 'No images found' : 'No images yet — generate your first image!'}</p>
         </div>
       ) : layout === 'masonry' ? (
         <div className="mt-6 columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5">
-          {images.map((img, i) => (
+          {filtered.map((img, i) => (
             <GalleryCard
               key={img.id}
               img={img}
               index={i}
-              isFavorite={favorites.has(img.id)}
-              onFavorite={() => toggleFavorite(img.id)}
+              onFavorite={() => toggleFavorite(img)}
               onClick={() => setSelected(img)}
               onReuse={() => handleReuse(img)}
             />
@@ -134,13 +156,12 @@ export function GalleryView() {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {images.map((img, i) => (
+          {filtered.map((img, i) => (
             <GalleryCard
               key={img.id}
               img={img}
               index={i}
-              isFavorite={favorites.has(img.id)}
-              onFavorite={() => toggleFavorite(img.id)}
+              onFavorite={() => toggleFavorite(img)}
               onClick={() => setSelected(img)}
               onReuse={() => handleReuse(img)}
               fixed
@@ -149,15 +170,14 @@ export function GalleryView() {
         </div>
       )}
 
-      {/* Lightbox */}
       <AnimatePresence>
         {selected && (
           <Lightbox
             image={selected}
-            isFavorite={favorites.has(selected.id)}
             onClose={() => setSelected(null)}
-            onFavorite={() => toggleFavorite(selected.id)}
+            onFavorite={() => toggleFavorite(selected)}
             onReuse={() => handleReuse(selected)}
+            onDelete={() => deleteImage(selected.id)}
           />
         )}
       </AnimatePresence>
@@ -168,15 +188,13 @@ export function GalleryView() {
 function GalleryCard({
   img,
   index,
-  isFavorite,
   onFavorite,
   onClick,
   onReuse,
   fixed = false,
 }: {
-  img: GeneratedImage;
+  img: StoredImage;
   index: number;
-  isFavorite: boolean;
   onFavorite: () => void;
   onClick: () => void;
   onReuse: () => void;
@@ -197,7 +215,7 @@ function GalleryCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.4), duration: 0.3 }}
       className={cn(
-        'group relative mb-4 break-inside-avoid overflow-hidden rounded-xl border border-border bg-card/40',
+        'group relative mb-4 break-inside-avoid overflow-hidden rounded-xl border border-border bg-card/40 cursor-pointer',
         fixed && 'aspect-square',
       )}
       onClick={onClick}
@@ -205,30 +223,20 @@ function GalleryCard({
       <img
         src={img.url}
         alt={img.prompt}
-        className={cn(
-          'w-full object-cover transition-transform duration-500 group-hover:scale-105',
-          fixed ? 'h-full' : 'auto',
-        )}
+        className={cn('w-full object-cover transition-transform duration-500 group-hover:scale-105', fixed ? 'h-full' : 'auto')}
         loading="lazy"
       />
 
-      {/* Favorite badge */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onFavorite();
-        }}
+        onClick={(e) => { e.stopPropagation(); onFavorite(); }}
         className={cn(
           'absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur transition-all',
-          isFavorite
-            ? 'bg-primary/80 text-black opacity-100'
-            : 'bg-background/60 text-foreground opacity-0 group-hover:opacity-100',
+          img.favorite ? 'bg-primary/80 text-black opacity-100' : 'bg-background/60 text-foreground opacity-0 group-hover:opacity-100',
         )}
       >
-        <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+        <Star className={cn('h-4 w-4', img.favorite && 'fill-current')} />
       </button>
 
-      {/* Hover overlay */}
       <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
         <p className="line-clamp-2 px-3 pt-8 text-xs text-white/90">{img.prompt}</p>
         <div className="flex items-center justify-between p-3">
@@ -241,29 +249,24 @@ function GalleryCard({
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/60 text-white backdrop-blur transition-colors hover:bg-background"
               title="Copy prompt"
             >
-              {copied ? (
-                <span className="text-[10px] font-bold text-success">✓</span>
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              {copied ? <span className="text-[10px] font-bold text-success">✓</span> : <Copy className="h-3.5 w-3.5" />}
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onReuse();
-              }}
+              onClick={(e) => { e.stopPropagation(); onReuse(); }}
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/60 text-white backdrop-blur transition-colors hover:bg-background"
               title="Reuse prompt"
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
-            <button
+            <a
+              href={img.url}
+              download="image.png"
               onClick={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/60 text-white backdrop-blur transition-colors hover:bg-background"
               title="Download"
             >
               <Download className="h-3.5 w-3.5" />
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -273,16 +276,16 @@ function GalleryCard({
 
 function Lightbox({
   image,
-  isFavorite,
   onClose,
   onFavorite,
   onReuse,
+  onDelete,
 }: {
-  image: GeneratedImage;
-  isFavorite: boolean;
+  image: StoredImage;
   onClose: () => void;
   onFavorite: () => void;
   onReuse: () => void;
+  onDelete: () => void;
 }) {
   return (
     <motion.div
@@ -314,22 +317,25 @@ function Lightbox({
           />
         </div>
 
-        <div className="flex w-full flex-col gap-4 overflow-y-auto scrollbar-thin p-5 lg:w-80 lg:max-h-[80vh]">
+        <div className="flex w-full flex-col gap-4 overflow-y-auto p-5 lg:w-80 lg:max-h-[80vh]">
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Prompt
-            </h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Prompt</h3>
             <p className="text-sm leading-relaxed">{image.prompt}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm">
             <MetaInfo label="Model" value={image.model} />
             <MetaInfo label="Size" value={`${image.width}×${image.height}`} />
-            <MetaInfo label="Steps" value={String(image.steps)} />
-            <MetaInfo label="CFG" value={String(image.cfgScale)} />
-            <MetaInfo label="Sampler" value={image.sampler} />
-            <MetaInfo label="Seed" value={String(image.seed)} />
+            <MetaInfo label="Date" value={new Date(image.created_at).toLocaleDateString()} />
           </div>
+
+          {image.tags && image.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {image.tags.map((tag) => (
+                <span key={tag} className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">{tag}</span>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 border-t border-border pt-4">
             <button
@@ -343,20 +349,33 @@ function Lightbox({
               onClick={onFavorite}
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded-xl border transition-colors',
-                isFavorite
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground',
+                image.favorite ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground',
               )}
             >
-              <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+              <Star className={cn('h-4 w-4', image.favorite && 'fill-current')} />
             </button>
-            <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground">
+            <a
+              href={image.url}
+              download="image.png"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground"
+            >
               <Download className="h-4 w-4" />
-            </button>
-            <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground">
+            </a>
+            <button
+              onClick={async () => {
+                try {
+                  if (navigator.share) await navigator.share({ url: image.url, title: 'Generated Image' });
+                  else await navigator.clipboard.writeText(image.url);
+                } catch { /* ignore */ }
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:text-foreground"
+            >
               <Share2 className="h-4 w-4" />
             </button>
-            <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-destructive/30 text-destructive transition-colors hover:bg-destructive/10">
+            <button
+              onClick={onDelete}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-destructive/30 text-destructive transition-colors hover:bg-destructive/10"
+            >
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -369,9 +388,7 @@ function Lightbox({
 function MetaInfo({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-medium">{value}</p>
     </div>
   );

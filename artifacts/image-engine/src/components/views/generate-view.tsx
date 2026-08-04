@@ -214,6 +214,32 @@ export function GenerateView() {
           prev.map((j) => (j.id === newJob.id ? { ...j, status: 'complete', progress: 100 } : j)),
         );
         toast({ title: 'Image generated successfully!' });
+
+        // Save to Supabase stored_images
+        const workflow = savedWorkflows.find((w) => w.id === selectedWorkflowId);
+        await supabase.from('stored_images').insert({
+          url: result.imageUrl,
+          prompt,
+          model: workflow?.workflow_name ?? selectedModel,
+          width: currentRatio.w,
+          height: currentRatio.h,
+          favorite: false,
+          tags: [],
+        });
+
+        // Save to generation_jobs
+        await supabase.from('generation_jobs').insert({
+          prompt,
+          model: workflow?.workflow_name ?? selectedModel,
+          status: 'complete',
+          progress: 100,
+          image_url: result.imageUrl,
+          started_at: newJob.startedAt,
+          completed_at: new Date().toISOString(),
+          eta_seconds: 0,
+          error_message: '',
+          current_node: '',
+        });
       } else {
         console.error('[generate] Generation failed:', JSON.stringify(result, null, 2));
         setJobs((prev) =>
