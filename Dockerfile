@@ -20,6 +20,8 @@ RUN pnpm install --no-frozen-lockfile
 # Set dummy env vars needed by Replit-specific vite configs during build
 ENV PORT=3000
 ENV BASE_PATH=/
+ENV VITE_SUPABASE_URL=https://irwhkqrpexblmrhfalge.supabase.co
+ENV VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlyd2hrcXJwZXhibG1yaGZhbGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjM2MTQsImV4cCI6MjEwMTM5OTYxNH0.KxX2wIPuev1fZPWH4rhy5AVSFocqCZIZ9gNIt-_7dck
 
 # Build only api-server and image-engine (skip mockup-sandbox)
 RUN pnpm run typecheck
