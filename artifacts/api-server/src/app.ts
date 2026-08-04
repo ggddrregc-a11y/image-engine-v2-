@@ -1,8 +1,12 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -31,9 +35,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-// JSON 404 handler — catches any /api/* route not matched above
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ error: "Not found" });
+// Serve frontend static files
+const frontendDist = path.resolve(__dirname, "../../image-engine/dist/public");
+app.use(express.static(frontendDist));
+
+// SPA fallback — serve index.html for all non-API routes
+app.get("*", (_req: Request, res: Response) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
 });
 
 // JSON error handler — ensures errors never return HTML
