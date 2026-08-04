@@ -1,6 +1,6 @@
-const clampCfg = (value: number) => Math.min(1.5, Math.max(1.0, value));
+const clampCfg = (value: number) => Math.min(20, Math.max(1, value));
 const resolveQualitySteps = (quality: 'standard' | 'high') =>
-  quality === 'high' ? 9 : 4;
+  quality === 'high' ? 40 : 20;
 const generateSeed = () => Math.floor(Math.random() * 0x7fffffff);
 
 /**
@@ -13,9 +13,11 @@ export function patchWorkflow(
   height: number,
   quality: 'standard' | 'high',
   promptText: string,
+  cfg = 7,
+  steps?: number,
 ): Record<string, unknown> {
   const updated = { ...workflowJson };
-  const qualitySteps = resolveQualitySteps(quality);
+  const qualitySteps = steps ?? resolveQualitySteps(quality);
   const seed = generateSeed();
 
   for (const [nodeId, nodeData] of Object.entries(updated)) {
@@ -51,7 +53,7 @@ export function patchWorkflow(
           ...inputs,
           steps: qualitySteps,
           seed,
-          cfg: clampCfg(1.25),
+          cfg: clampCfg(cfg),
           width,
           height,
         },

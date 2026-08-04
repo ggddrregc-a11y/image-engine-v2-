@@ -159,6 +159,8 @@ export function GenerateView() {
       currentRatio.h,
       quality,
       prompt,
+      cfgScale,
+      steps,
     );
 
     const nodes = ['Load Model', 'Encode Prompt', 'Sample', 'Decode Latent', 'Upscale', 'VAE Decode'];
