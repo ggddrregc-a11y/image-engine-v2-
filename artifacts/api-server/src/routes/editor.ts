@@ -133,6 +133,8 @@ router.post("/edit", async (req, res) => {
 
     const result = JSON.parse(response.body) as Record<string, unknown>;
 
+    req.log.info({ success: result.success, hasImageData: !!result.image_data, imageUrl: result.image_url }, "[edit] API response");
+
     if (!result.success) {
       return res.status(422).json({ ok: false, error: (result.error as string) ?? "Editing failed" });
     }
@@ -142,7 +144,24 @@ router.post("/edit", async (req, res) => {
     }
 
     if (result.image_url) {
-      return res.json({ ok: true, imageUrl: result.image_url });
+      // Download the image and return it as base64 to avoid CORS issues on the frontend
+      try {
+        const imgUrl = result.image_url as string;
+        const imgResponse = await postJson(imgUrl, "", 30000).catch(() => null);
+        // postJson is for POST only — use https.get instead
+        const imgBase64 = await new Promise<string>((resolve, reject) => {
+          const parsed = new URL(imgUrl);
+          const lib = parsed.protocol === "https:" ? https : http;
+          lib.get({ hostname: parsed.hostname, path: parsed.pathname + parsed.search, rejectUnauthorized: false }, (res) => {
+            const chunks: Buffer[] = [];
+            res.on("data", (c: Buffer) => chunks.push(c));
+            res.on("end", () => resolve(Buffer.concat(chunks).toString("base64")));
+          }).on("error", reject);
+        });
+        return res.json({ ok: true, imageData: imgBase64 });
+      } catch {
+        return res.json({ ok: true, imageUrl: result.image_url });
+      }
     }
 
     return res.status(422).json({ ok: false, error: "No image in response" });
