@@ -67,6 +67,7 @@ export function GenerateView() {
   const [copied, setCopied] = useState(false);
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [recentResults, setRecentResults] = useState(SAMPLE_IMAGES.slice(0, 4));
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load saved workflows so their models appear in the UI
@@ -182,7 +183,7 @@ export function GenerateView() {
 
     try {
       // Send the patched workflow JSON as prompt (JSON object, not a stringified string)
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/comfy/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: patchedWorkflow }),
@@ -207,8 +208,18 @@ export function GenerateView() {
 
       const result = await response.json();
       console.log('[generate] ComfyUI response:', JSON.stringify(result, null, 2));
-      if (!result?.ok) {
+      if (result?.ok && result?.imageUrl) {
+        // Show the generated image
+        setGeneratedImage(result.imageUrl);
+        setJobs((prev) =>
+          prev.map((j) => (j.id === newJob.id ? { ...j, status: 'complete', progress: 100 } : j)),
+        );
+        toast({ title: 'Image generated successfully!' });
+      } else {
         console.error('[generate] Generation failed:', JSON.stringify(result, null, 2));
+        setJobs((prev) =>
+          prev.map((j) => (j.id === newJob.id ? { ...j, status: 'failed' } : j)),
+        );
       }
     } catch (error) {
       console.error('[generate] Request failed:', error);
@@ -730,6 +741,26 @@ export function GenerateView() {
                     </span>
                   </div>
                 </div>
+              ) : generatedImage ? (
+                <>
+                  <img
+                    src={generatedImage}
+                    alt="Generated image"
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity hover:opacity-100">
+                    <div className="flex w-full items-center justify-between p-3">
+                      <a
+                        href={generatedImage}
+                        download="generated.png"
+                        className="flex items-center gap-1.5 rounded-lg bg-black/40 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Save
+                      </a>
+                    </div>
+                  </div>
+                </>
               ) : recentResults[0] ? (
                 <>
                   <img

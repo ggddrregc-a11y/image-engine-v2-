@@ -16,8 +16,7 @@ const parseJson = (value: unknown): unknown => {
 /**
  * POST /api/comfy/generate
  *
- * Direct proxy to COMFYUI_BASE_URL/prompt. Safely handles a `prompt` field
- * that may arrive as a stringified JSON string (preventing double-stringification).
+ * Proxies a ComfyUI workflow, waits for completion via polling, and returns the image URL.
  */
 router.post("/comfy/generate", async (req, res) => {
   const base = getBase();
@@ -40,19 +39,55 @@ router.post("/comfy/generate", async (req, res) => {
 
     req.log.info({ base }, "[comfy/generate] sending payload to /prompt");
 
+    // Step 1: Submit the prompt to ComfyUI
     const comfyRes = await fetch(`${base}/prompt`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    const contentType = comfyRes.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      const json = await comfyRes.json();
-      return res.status(comfyRes.ok ? 200 : 502).json({ ok: comfyRes.ok, data: json });
+    if (!comfyRes.ok) {
+      const text = await comfyRes.text().catch(() => "unknown error");
+      return res.status(502).json({ error: `ComfyUI rejected prompt: ${text}` });
     }
-    const text = await comfyRes.text();
-    return res.status(comfyRes.ok ? 200 : 502).json({ ok: comfyRes.ok, data: text });
+
+    const comfyData = await comfyRes.json() as { prompt_id?: string };
+    const promptId = comfyData.prompt_id;
+
+    if (!promptId) {
+      return res.status(502).json({ error: "ComfyUI did not return a prompt_id", data: comfyData });
+    }
+
+    req.log.info({ promptId }, "[comfy/generate] prompt queued, polling for result...");
+
+    // Step 2: Poll /history/{prompt_id} until done (max 5 minutes)
+    const maxAttempts = 300; // 300 * 1s = 5 min
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const histRes = await fetch(`${base}/history/${promptId}`);
+      if (!histRes.ok) continue;
+
+      const hist = await histRes.json() as Record<string, unknown>;
+      const entry = hist[promptId] as Record<string, unknown> | undefined;
+      if (!entry) continue;
+
+      const outputs = entry.outputs as Record<string, unknown> | undefined;
+      if (!outputs) continue;
+
+      // Find first image in outputs
+      for (const nodeOutput of Object.values(outputs)) {
+        const node = nodeOutput as { images?: Array<{ filename: string; subfolder: string; type: string }> };
+        if (node.images && node.images.length > 0) {
+          const img = node.images[0];
+          const imageUrl = `${base}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${encodeURIComponent(img.type)}`;
+          req.log.info({ imageUrl }, "[comfy/generate] image ready");
+          return res.json({ ok: true, promptId, imageUrl });
+        }
+      }
+    }
+
+    return res.status(504).json({ error: "Timed out waiting for ComfyUI to finish" });
   } catch (err) {
     return res.status(502).json({ error: String(err) });
   }
