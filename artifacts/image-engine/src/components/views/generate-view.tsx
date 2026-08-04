@@ -267,6 +267,7 @@ export function GenerateView() {
   const currentRatio = ASPECT_RATIOS.find((r) => r.value === aspectRatio)!;
 
   return (
+    <>
     <PageContainer>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px]">
         {/* Left: Prompt + controls */}
@@ -848,5 +849,6 @@ export function GenerateView() {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
   );
 }
