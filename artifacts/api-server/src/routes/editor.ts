@@ -28,7 +28,45 @@ router.post("/edit", async (req, res) => {
   try {
     req.log.info({ apiUrl, width, height }, "[edit] sending request to image editor API");
 
-    const payload: Record<string, unknown> = { text, links: imageUrl };
+    // If imageUrl is a base64 data URL, upload it to a temporary host first
+    let resolvedImageUrl = imageUrl;
+
+    if (imageUrl.startsWith("data:image")) {
+      // Extract base64 content and upload to tmpfiles.org
+      const base64Match = imageUrl.match(/^data:image\/\w+;base64,(.+)$/);
+      if (!base64Match) {
+        return res.status(400).json({ ok: false, error: "Invalid image data" });
+      }
+      const base64Data = base64Match[1];
+      const buffer = Buffer.from(base64Data, "base64");
+
+      // Upload to tmpfiles.org (free, no auth needed)
+      const formData = new FormData();
+      const blob = new Blob([buffer], { type: "image/png" });
+      formData.append("file", blob, "image.png");
+
+      const uploadRes = await fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        return res.status(502).json({ ok: false, error: "Failed to upload image for processing" });
+      }
+
+      const uploadData = await uploadRes.json() as { data?: { url?: string } };
+      const tmpUrl = uploadData?.data?.url;
+      if (!tmpUrl) {
+        return res.status(502).json({ ok: false, error: "Failed to get upload URL" });
+      }
+
+      // tmpfiles.org returns https://tmpfiles.org/XXXXXX/image.png
+      // direct download link is https://tmpfiles.org/dl/XXXXXX/image.png
+      resolvedImageUrl = tmpUrl.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+      req.log.info({ resolvedImageUrl }, "[edit] uploaded base64 image to temp host");
+    }
+
+    const payload: Record<string, unknown> = { text, links: resolvedImageUrl };
     if (width) payload.width = width;
     if (height) payload.height = height;
 
@@ -52,12 +90,7 @@ router.post("/edit", async (req, res) => {
 
     // Return image data or URL
     if (result.image_data) {
-      // Convert base64 to image URL via our server
-      const base64 = result.image_data as string;
-      const buffer = Buffer.from(base64, "base64");
-      res.setHeader("Content-Type", "image/png");
-      res.setHeader("X-Image-Result", "base64");
-      return res.json({ ok: true, imageData: base64 });
+      return res.json({ ok: true, imageData: result.image_data as string });
     }
 
     if (result.image_url) {
