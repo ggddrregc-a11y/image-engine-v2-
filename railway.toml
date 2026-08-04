@@ -4,3 +4,6 @@ buildCommand = "pnpm install --no-frozen-lockfile && pnpm run build"
 
 [build.nixpacksPlan.phases.install]
 cmds = []
+
+[variables]
+NODE_VERSION = "20"
