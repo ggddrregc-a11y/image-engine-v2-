@@ -40,7 +40,7 @@ const frontendDist = path.resolve(__dirname, "../../image-engine/dist/public");
 app.use(express.static(frontendDist));
 
 // SPA fallback — serve index.html for all non-API routes
-app.get("*", (_req: Request, res: Response) => {
+app.get("/{*path}", (_req: Request, res: Response) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
