@@ -31,7 +31,7 @@ function ShellContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
         )}
@@ -42,7 +42,7 @@ function ShellContent() {
             animate={{ x: 0 }}
             exit={{ x: -300 }}
             transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-            className="fixed left-0 top-0 z-50 h-full w-64 lg:hidden"
+            className="fixed left-0 top-0 z-50 h-full w-64"
           >
             <div className="relative h-full">
               <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
