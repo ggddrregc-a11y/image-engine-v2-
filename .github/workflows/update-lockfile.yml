@@ -1,0 +1,25 @@
+name: Update pnpm lockfile
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Update lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Commit updated lockfile
+        run: |
+          git config user.email "ggddrregc@gmail.com"
+          git config user.name "ggddrregc-a11y"
+          git add pnpm-lock.yaml
+          git diff --staged --quiet || git commit -m "chore: update pnpm-lock.yaml to match overrides"
+          git push
