@@ -17,7 +17,11 @@ COPY scripts/ ./scripts/
 # Install dependencies (no frozen lockfile)
 RUN pnpm install --no-frozen-lockfile
 
-# Build only the necessary packages (skip mockup-sandbox - it's Replit-only)
+# Set dummy env vars needed by Replit-specific vite configs during build
+ENV PORT=3000
+ENV BASE_PATH=/
+
+# Build only api-server and image-engine (skip mockup-sandbox)
 RUN pnpm run typecheck
 RUN pnpm --filter "./artifacts/api-server" --filter "./artifacts/image-engine" --if-present run build
 
