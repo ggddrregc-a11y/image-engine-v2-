@@ -2,6 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/components/providers/app-provider';
 import { GenerateView } from './generate-view';
+import { EditorView } from './editor-view';
 import { GalleryView } from './gallery-view';
 import { HistoryView } from './history-view';
 import { CollectionsView } from './collections-view';
@@ -14,6 +15,7 @@ import type { ViewId } from '@/lib/types';
 
 const VIEWS: Record<ViewId, React.ComponentType> = {
   generate: GenerateView,
+  editor: EditorView,
   gallery: GalleryView,
   history: HistoryView,
   collections: CollectionsView,

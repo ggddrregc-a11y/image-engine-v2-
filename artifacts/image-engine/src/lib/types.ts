@@ -1,5 +1,6 @@
 export type ViewId =
   | 'generate'
+  | 'editor'
   | 'gallery'
   | 'history'
   | 'collections'

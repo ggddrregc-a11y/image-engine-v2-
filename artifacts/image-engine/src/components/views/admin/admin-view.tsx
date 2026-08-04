@@ -14,6 +14,7 @@ import {
   ScrollText,
   ShieldCheck,
   LogOut,
+  Wand2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
@@ -30,6 +31,8 @@ import { AdminLoginPage } from './admin-login-page';
 import { useAdminAuth } from '@/components/providers/admin-auth-provider';
 import { useApp } from '@/components/providers/app-provider';
 
+import { AdminImageEditorPage } from './pages/image-editor-page';
+
 export type AdminSubPage =
   | 'providers'
   | 'comfyui'
@@ -39,7 +42,8 @@ export type AdminSubPage =
   | 'queue'
   | 'storage'
   | 'users'
-  | 'logs';
+  | 'logs'
+  | 'image-editor';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -56,6 +60,7 @@ const SUB_PAGES: {
   { id: 'storage', label: 'Storage', icon: HardDrive, description: 'Generated image library' },
   { id: 'users', label: 'User Management', icon: Users, description: 'Roles and permissions' },
   { id: 'logs', label: 'System Logs', icon: ScrollText, description: 'API, generation, and error logs' },
+  { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
 ];
 
 export function AdminView() {
@@ -155,6 +160,7 @@ export function AdminView() {
             {subPage === 'storage' && <AdminStoragePage />}
             {subPage === 'users' && <AdminUsersPage />}
             {subPage === 'logs' && <AdminLogsPage />}
+            {subPage === 'image-editor' && <AdminImageEditorPage />}
           </AdminPageContainer>
         </AnimatePresence>
       </div>

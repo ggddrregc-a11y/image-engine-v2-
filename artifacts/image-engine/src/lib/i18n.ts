@@ -66,6 +66,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'sidebar.api': 'API',
     'sidebar.admin': 'Admin',
     'sidebar.collapse': 'Collapse',
+    'sidebar.editor': 'Editor',
   },
   ar: {
     'workspace.personal': 'شخصي',
@@ -132,6 +133,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'sidebar.api': 'واجهة برمجة التطبيقات',
     'sidebar.admin': 'الإدمن',
     'sidebar.collapse': 'طي',
+    'sidebar.editor': 'المحرر',
   },
 };
 

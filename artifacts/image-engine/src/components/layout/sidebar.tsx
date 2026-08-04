@@ -9,6 +9,7 @@ import {
   Code2,
   Shield,
   ChevronLeft,
+  Wand2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
@@ -16,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { useApp } from '@/components/providers/app-provider';
 import { t } from '@/lib/i18n';
 import type { ViewId } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 const NAV_ITEMS: {
   id: ViewId;
@@ -41,6 +44,22 @@ export function Sidebar({
   onToggle: () => void;
 }) {
   const { activeView, setActiveView, locale } = useApp();
+  const [editorEnabled, setEditorEnabled] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('feature_settings')
+      .select('enabled')
+      .eq('id', 'image_editor')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setEditorEnabled(data.enabled); });
+  }, []);
+
+  const navItems = [
+    ...NAV_ITEMS.slice(0, 1), // generate
+    ...(editorEnabled ? [{ id: 'editor' as ViewId, labelKey: 'sidebar.editor', icon: Wand2 }] : []),
+    ...NAV_ITEMS.slice(1), // rest
+  ];
 
   return (
     <aside
@@ -54,7 +73,7 @@ export function Sidebar({
       </div>
 
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = activeView === item.id;
           const Icon = item.icon;
           return (
