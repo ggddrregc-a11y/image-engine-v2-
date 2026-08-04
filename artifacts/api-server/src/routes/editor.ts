@@ -1,8 +1,33 @@
 import { Router } from "express";
 import https from "https";
 import http from "http";
+import crypto from "crypto";
 
 const router = Router();
+
+// In-memory temp image store: token -> { buffer, expires }
+const _tmpImages = new Map<string, { buffer: Buffer; expires: number }>();
+
+// Cleanup expired images every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of _tmpImages) {
+    if (val.expires < now) _tmpImages.delete(key);
+  }
+}, 5 * 60 * 1000);
+
+/**
+ * GET /api/tmp/:token — serves a temporarily stored image
+ */
+router.get("/tmp/:token", (req, res) => {
+  const entry = _tmpImages.get(req.params.token);
+  if (!entry || entry.expires < Date.now()) {
+    return res.status(404).send("Not found");
+  }
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "no-store");
+  return res.send(entry.buffer);
+});
 
 /**
  * POST request with SSL verification disabled (equivalent to Python's verify=False).
@@ -48,54 +73,6 @@ function postJson(url: string, body: string, timeoutMs: number): Promise<{ statu
 }
 
 /**
- * Upload buffer to catbox.moe and return direct URL.
- */
-async function uploadToCatbox(buffer: Buffer): Promise<string> {
-  const boundary = `----FormBoundary${Date.now()}`;
-  const filename = "image.png";
-  const contentType = "image/png";
-
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`),
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`),
-    buffer,
-    Buffer.from(`\r\n--${boundary}--\r\n`),
-  ]);
-
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: "catbox.moe",
-      port: 443,
-      path: "/user/api.php",
-      method: "POST",
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": body.length,
-      },
-      rejectUnauthorized: false,
-    };
-
-    const req = https.request(options, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (c: Buffer) => chunks.push(c));
-      res.on("end", () => {
-        const text = Buffer.concat(chunks).toString("utf8").trim();
-        if (text.startsWith("http")) {
-          resolve(text);
-        } else {
-          reject(new Error(`catbox.moe returned: ${text}`));
-        }
-      });
-    });
-
-    req.setTimeout(30000, () => { req.destroy(); reject(new Error("catbox upload timeout")); });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-/**
  * POST /api/edit
  */
 router.post("/edit", async (req, res) => {
@@ -112,6 +89,9 @@ router.post("/edit", async (req, res) => {
 
   const apiUrl = process.env["IMAGE_EDITOR_API_URL"] ?? "https://viscodev.x10.mx/img_editing/api.php";
 
+  // Determine the public base URL of this server
+  const host = process.env["PUBLIC_URL"] ?? `https://${req.headers.host}`;
+
   try {
     req.log.info({ apiUrl, width, height }, "[edit] sending request to image editor API");
 
@@ -124,14 +104,12 @@ router.post("/edit", async (req, res) => {
       }
       const buffer = Buffer.from(base64Match[1], "base64");
 
-      try {
-        resolvedImageUrl = await uploadToCatbox(buffer);
-        req.log.info({ resolvedImageUrl }, "[edit] uploaded to catbox.moe");
-      } catch (uploadErr) {
-        const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
-        req.log.error({ err: msg }, "[edit] catbox upload failed");
-        return res.status(502).json({ ok: false, error: "Failed to upload image for processing" });
-      }
+      // Store image in memory and expose it via /api/tmp/:token
+      const token = crypto.randomBytes(16).toString("hex");
+      _tmpImages.set(token, { buffer, expires: Date.now() + 10 * 60 * 1000 }); // 10 min TTL
+
+      resolvedImageUrl = `${host}/api/tmp/${token}`;
+      req.log.info({ resolvedImageUrl }, "[edit] stored image temporarily on server");
     }
 
     const payload: Record<string, unknown> = { text, links: resolvedImageUrl };
