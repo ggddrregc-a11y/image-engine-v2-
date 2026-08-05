@@ -19,7 +19,21 @@ import { useApp } from '@/components/providers/app-provider';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { SAMPLE_IMAGES } from '@/lib/mock-data';
 import type { StoredImage } from '@/lib/admin-types';
+
+// Convert SAMPLE_IMAGES to StoredImage shape for fallback display
+const FALLBACK_IMAGES: StoredImage[] = SAMPLE_IMAGES.map((img) => ({
+  id: img.id,
+  url: img.url,
+  prompt: img.prompt,
+  model: img.model,
+  width: img.width,
+  height: img.height,
+  favorite: img.favorite,
+  tags: [],
+  created_at: img.createdAt,
+}));
 
 export function GalleryView() {
   const { setPrompt, setActiveView } = useApp();
@@ -32,11 +46,20 @@ export function GalleryView() {
 
   const fetchImages = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('stored_images')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (data) setImages(data as StoredImage[]);
+    try {
+      const { data, error } = await supabase
+        .from('stored_images')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) {
+        setImages(data as StoredImage[]);
+      } else {
+        // Supabase empty or unavailable — show sample images as fallback
+        setImages(FALLBACK_IMAGES);
+      }
+    } catch {
+      setImages(FALLBACK_IMAGES);
+    }
     setLoading(false);
   }, []);
 

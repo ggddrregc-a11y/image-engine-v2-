@@ -33,6 +33,7 @@ import {
   SAMPLERS,
   ASPECT_RATIOS,
   MODELS,
+  SAMPLE_IMAGES,
 } from '@/lib/mock-data';
 import type { GenerationJob } from '@/lib/types';
 import type { ComfyUIWorkflow } from '@/lib/admin-types';
@@ -103,8 +104,28 @@ export function GenerateView() {
       .select('id, url, prompt')
       .order('created_at', { ascending: false })
       .limit(12)
-      .then(({ data }) => {
-        if (data && data.length > 0) setRecentResults(data);
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          setRecentResults(data);
+        } else {
+          // Fallback to sample images when Supabase is empty or unavailable
+          setRecentResults(
+            SAMPLE_IMAGES.slice(0, 12).map((img) => ({
+              id: img.id,
+              url: img.url,
+              prompt: img.prompt,
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        setRecentResults(
+          SAMPLE_IMAGES.slice(0, 12).map((img) => ({
+            id: img.id,
+            url: img.url,
+            prompt: img.prompt,
+          })),
+        );
       });
   }, []);
 
