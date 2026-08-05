@@ -26,7 +26,6 @@ import { useApp } from '@/components/providers/app-provider';
 import { PageContainer } from './shared';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { patchWorkflow } from '@/lib/workflow-utils';
 import {
   PROMPT_TEMPLATES,
   FAVORITE_PROMPTS,
@@ -36,7 +35,7 @@ import {
   SAMPLE_IMAGES,
 } from '@/lib/mock-data';
 import type { GenerationJob } from '@/lib/types';
-import type { ComfyUIWorkflow } from '@/lib/admin-types';
+import type { ImageProvider } from '@/lib/admin-types';
 
 const MAX_CHARS = 5000;
 
@@ -64,8 +63,8 @@ export function GenerateView() {
   } = useApp();
   const { toast } = useToast();
   const [quality, setQuality] = useState<'turbo' | 'standard' | 'high'>('standard');
-  const [savedWorkflows, setSavedWorkflows] = useState<ComfyUIWorkflow[]>([]);
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
+  const [imageProviders, setImageProviders] = useState<ImageProvider[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
 
   const [showNegative, setShowNegative] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -78,23 +77,23 @@ export function GenerateView() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load saved workflows so their models appear in the UI
+  // Load image providers so their models appear in the UI
   useEffect(() => {
-    const fetchWorkflows = async () => {
-      const { data, error } = await supabase
-        .from('comfyui_workflows')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data) {
-        const workflows = data as ComfyUIWorkflow[];
-        setSavedWorkflows(workflows);
-        if (workflows.length > 0) {
-          setSelectedWorkflowId(workflows[0].id);
-          setSelectedModel(workflows[0].workflow_name);
+    const fetchProviders = async () => {
+      try {
+        const res = await fetch('/api/image-providers');
+        const data = await res.json() as { ok: boolean; providers: ImageProvider[] };
+        if (data.ok && data.providers.length > 0) {
+          setImageProviders(data.providers);
+          const def = data.providers.find((p) => p.is_default) ?? data.providers[0];
+          setSelectedProviderId(def.id);
+          setSelectedModel(def.model_name || def.name);
         }
+      } catch {
+        // silently ignore — user will see empty model list
       }
     };
-    fetchWorkflows();
+    fetchProviders();
   }, [setSelectedModel]);
 
   // Fetch recent images from gallery
@@ -152,11 +151,11 @@ export function GenerateView() {
   }, [jobs]);
 
   const handleGenerate = async () => {
-    console.log('[Generate] workflowId=', selectedWorkflowId, 'prompt=', prompt);
-    if (!selectedWorkflowId) {
+    console.log('[Generate] providerId=', selectedProviderId, 'prompt=', prompt);
+    if (!selectedProviderId) {
       toast({
-        title: 'Workflow not selected',
-        description: 'Please select a saved workflow before generating.',
+        title: 'Provider not selected',
+        description: 'Please select an image provider before generating.',
       });
       return;
     }
@@ -181,41 +180,15 @@ export function GenerateView() {
       return;
     }
 
-    // Find the selected workflow from state (already fetched client-side)
-    const workflow = savedWorkflows.find((w) => w.id === selectedWorkflowId);
-    if (!workflow) {
+    // Find the selected provider
+    const provider = imageProviders.find((p) => p.id === selectedProviderId);
+    if (!provider) {
       toast({
-        title: 'Workflow not found',
-        description: 'Could not find the selected workflow.',
+        title: 'Provider not found',
+        description: 'Could not find the selected image provider.',
       });
       return;
     }
-
-    // Parse workflow_json safely (may be stored as a string or object)
-    let workflowJson: Record<string, unknown>;
-    try {
-      workflowJson =
-        typeof workflow.workflow_json === 'string'
-          ? JSON.parse(workflow.workflow_json)
-          : (workflow.workflow_json as Record<string, unknown>);
-    } catch {
-      toast({
-        title: 'Invalid workflow',
-        description: 'Could not parse workflow JSON.',
-      });
-      return;
-    }
-
-    // Patch workflow with current generation settings
-    const patchedWorkflow = patchWorkflow(
-      workflowJson,
-      currentRatio.w,
-      currentRatio.h,
-      quality,
-      prompt,
-      cfgScale,
-      steps,
-    );
 
     const nodes = ['Load Model', 'Encode Prompt', 'Sample', 'Decode Latent', 'Upscale', 'VAE Decode'];
     const newJob: GenerationJob = {
@@ -232,11 +205,30 @@ export function GenerateView() {
     setJobs((prev) => [newJob, ...prev].slice(0, 3));
 
     try {
-      // Send the patched workflow JSON as prompt (JSON object, not a stringified string)
-      const response = await fetch('/api/comfy/generate', {
+      // Build request body based on provider type
+      const requestBody: Record<string, unknown> = {
+        provider_id: provider.id,
+        provider_type: provider.provider_type,
+        base_url: provider.base_url,
+        model: provider.model_name,
+        prompt,
+        width: currentRatio.w,
+        height: currentRatio.h,
+        steps,
+        cfg_scale: cfgScale,
+        quality,
+        sampler,
+      };
+
+      // For ComfyUI, route through the existing comfy endpoint
+      const endpoint = provider.provider_type === 'comfyui'
+        ? '/api/comfy/generate'
+        : '/api/generate';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: patchedWorkflow }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -271,11 +263,10 @@ export function GenerateView() {
         toast({ title: 'Image generated successfully!' });
 
         // Save to Supabase stored_images
-        const workflow = savedWorkflows.find((w) => w.id === selectedWorkflowId);
         await supabase.from('stored_images').insert({
           url: result.imageUrl,
           prompt,
-          model: workflow?.workflow_name ?? selectedModel,
+          model: provider.model_name || provider.name,
           width: currentRatio.w,
           height: currentRatio.h,
           favorite: false,
@@ -285,7 +276,7 @@ export function GenerateView() {
         // Save to generation_jobs
         await supabase.from('generation_jobs').insert({
           prompt,
-          model: workflow?.workflow_name ?? selectedModel,
+          model: provider.model_name || provider.name,
           status: 'complete',
           progress: 100,
           image_url: result.imageUrl,
@@ -511,22 +502,25 @@ export function GenerateView() {
                       Model
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {savedWorkflows.length > 0 ? (
-                        savedWorkflows.map((workflow) => (
+                      {imageProviders.length > 0 ? (
+                        imageProviders.map((provider) => (
                           <button
-                            key={workflow.id}
+                            key={provider.id}
                             onClick={() => {
-                              setSelectedModel(workflow.workflow_name);
-                              setSelectedWorkflowId(workflow.id);
+                              setSelectedProviderId(provider.id);
+                              setSelectedModel(provider.model_name || provider.name);
                             }}
                             className={cn(
                               'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
-                              selectedModel === workflow.workflow_name
+                              selectedProviderId === provider.id
                                 ? 'border-primary/40 bg-primary/10 text-primary'
                                 : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
                             )}
                           >
-                            {workflow.workflow_name}
+                            {provider.name}
+                            {provider.model_name && (
+                              <span className="ml-1.5 opacity-60">· {provider.model_name}</span>
+                            )}
                           </button>
                         ))
                       ) : (

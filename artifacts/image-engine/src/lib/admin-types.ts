@@ -166,3 +166,25 @@ export interface ConnectionTestResult {
   availableModels?: string[];
   error?: string;
 }
+
+export type ImageProviderType =
+  | 'comfyui'
+  | 'openai'
+  | 'stability'
+  | 'huggingface'
+  | 'replicate'
+  | 'fal'
+  | 'custom';
+
+export interface ImageProvider {
+  id: string;
+  name: string;
+  provider_type: ImageProviderType;
+  base_url: string;
+  api_key: string;
+  model_name: string;
+  enabled: boolean;
+  is_default: boolean;
+  notes: string;
+  created_at: string;
+}
