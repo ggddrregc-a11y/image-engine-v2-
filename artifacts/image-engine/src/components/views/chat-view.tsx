@@ -119,7 +119,7 @@ export function ChatView() {
     <PageContainer>
       <PageHeader
         title="AI Chat"
-        description="تحدث مع Claude Sonnet 5"
+        description="تحدث مع GPT-4o Mini"
         icon={MessageSquare}
         actions={
           messages.length > 0 ? (
@@ -149,7 +149,7 @@ export function ChatView() {
                 <Bot className="h-8 w-8 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-base font-semibold">Claude Sonnet 5</h3>
+                <h3 className="text-base font-semibold">GPT-4o Mini</h3>
                 <p className="mt-1 text-sm text-muted-foreground">اسألني أي شيء، أنا هنا للمساعدة</p>
               </div>
               <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
@@ -285,7 +285,7 @@ export function ChatView() {
           </button>
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground/50">
-          Powered by Claude Sonnet 5 · viscodev.x10.mx
+          Powered by GPT-4o Mini · viscodev.x10.mx
         </p>
       </div>
     </PageContainer>

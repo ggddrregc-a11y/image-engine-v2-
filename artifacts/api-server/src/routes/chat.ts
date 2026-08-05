@@ -2,7 +2,7 @@ import { Router } from "express";
 
 const router = Router();
 
-const CHAT_API_URL = "https://viscodev.x10.mx/claude-sonnet-5/api.php";
+const CHAT_API_URL = "https://viscodev.x10.mx/gpt-4o-mini/api.php";
 
 /**
  * POST /api/chat
@@ -36,14 +36,14 @@ router.post("/chat", async (req, res) => {
       return res.status(503).json({ ok: false, error: "Service unavailable. Try again later." });
     }
 
-    const data = await response.json() as { success: boolean; reply?: string; error?: string };
+    const data = await response.json() as { success: boolean; text?: string; error?: string };
 
     if (!data.success) {
       return res.status(422).json({ ok: false, error: data.error ?? "Chat API returned failure" });
     }
 
     req.log.info("[chat] reply received successfully");
-    return res.json({ ok: true, reply: data.reply ?? "" });
+    return res.json({ ok: true, reply: data.text ?? "" });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     req.log.error({ err: message }, "[chat] request failed");
