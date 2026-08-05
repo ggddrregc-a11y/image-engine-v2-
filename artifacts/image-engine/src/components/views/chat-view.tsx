@@ -406,9 +406,6 @@ export function ChatView() {
 
                 <div className="text-center space-y-1">
                   <h2 className="text-xl font-bold tracking-tight">مرحباً! كيف يمكنني مساعدتك؟</h2>
-                  <p className="text-xs font-mono text-primary/70">
-                    {providers.find(p => p.id === selectedProviderId)?.model_name ?? 'gpt-4o-mini'}
-                  </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     اسألني أي شيء، أنا هنا للمساعدة
                   </p>

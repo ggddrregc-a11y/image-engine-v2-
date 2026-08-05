@@ -217,9 +217,20 @@ router.post("/chat", async (req, res) => {
   }
 
   try {
-    const reply = provider.provider_type === "gemini"
-      ? await callGemini(provider.api_key, provider.model_name, message.trim())
-      : await callOpenAICompatible(provider.base_url, provider.api_key, provider.model_name, message.trim());
+    let reply = "";
+    // viscodev proxy uses a special GET-based API
+    if (provider.base_url.includes("viscodev.x10.mx")) {
+      const url = `${provider.base_url.replace(/\/$/, "")}?text=${encodeURIComponent(message.trim())}`;
+      const r = await fetch(url, { method: "GET" });
+      if (!r.ok) throw new Error(`Viscodev error ${r.status}`);
+      const d = await r.json() as { success: boolean; text?: string; reply?: string };
+      if (!d.success) throw new Error("Viscodev returned failure");
+      reply = d.text ?? d.reply ?? "";
+    } else if (provider.provider_type === "gemini") {
+      reply = await callGemini(provider.api_key, provider.model_name, message.trim());
+    } else {
+      reply = await callOpenAICompatible(provider.base_url, provider.api_key, provider.model_name, message.trim());
+    }
     req.log.info({ provider: provider.name, model: provider.model_name }, "[chat] reply received");
     return res.json({ ok: true, reply });
   } catch (err) {
