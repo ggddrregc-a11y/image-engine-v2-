@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, Save, Check, Loader2, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Megaphone, Save, Check, Loader2, RotateCcw, Eye, EyeOff, Sparkles, Zap, Star, Bell, Rocket, Gift } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   AdminCard, AdminButton, AdminLabel, AdminInput, AdminLoading, AdminToggle,
@@ -17,14 +17,14 @@ interface BannerConfig {
   color: 'amber' | 'blue' | 'green' | 'rose' | 'violet' | 'cyan';
 }
 
-const ICON_OPTIONS = [
-  { value: 'sparkles', label: '✦ Sparkles' },
-  { value: 'zap',      label: '⚡ Zap' },
-  { value: 'star',     label: '★ Star' },
-  { value: 'bell',     label: '🔔 Bell' },
-  { value: 'megaphone',label: '📢 Megaphone' },
-  { value: 'rocket',   label: '🚀 Rocket' },
-  { value: 'gift',     label: '🎁 Gift' },
+const ICON_OPTIONS: { value: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: 'sparkles',  label: 'Sparkles',  Icon: Sparkles },
+  { value: 'zap',       label: 'Zap',       Icon: Zap },
+  { value: 'star',      label: 'Star',      Icon: Star },
+  { value: 'bell',      label: 'Bell',      Icon: Bell },
+  { value: 'megaphone', label: 'Megaphone', Icon: Megaphone },
+  { value: 'rocket',    label: 'Rocket',    Icon: Rocket },
+  { value: 'gift',      label: 'Gift',      Icon: Gift },
 ];
 
 const COLOR_OPTIONS: { value: BannerConfig['color']; label: string; swatch: string }[] = [
@@ -39,7 +39,7 @@ const COLOR_OPTIONS: { value: BannerConfig['color']; label: string; swatch: stri
 const DEFAULT: BannerConfig = {
   id: 'main',
   enabled: false,
-  text: '✨ New feature just dropped — try it now!',
+  text: 'New feature just dropped — try it now!',
   cta_text: 'Learn more',
   cta_url: '#',
   icon: 'sparkles',
@@ -189,12 +189,13 @@ export function AdminBannerPage() {
                     key={o.value}
                     onClick={() => set('icon', o.value)}
                     className={cn(
-                      'rounded-xl border px-3 py-2 text-xs font-medium transition-all',
+                      'flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all',
                       config.icon === o.value
                         ? 'border-primary/40 bg-primary/10 text-primary'
                         : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:text-foreground',
                     )}
                   >
+                    <o.Icon className="h-3.5 w-3.5" />
                     {o.label}
                   </button>
                 ))}
