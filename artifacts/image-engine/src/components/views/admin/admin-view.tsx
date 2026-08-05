@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
-  Workflow,
   FileText,
   SlidersHorizontal,
   ListOrdered,
@@ -16,12 +15,10 @@ import {
   Zap,
   LifeBuoy,
   Megaphone,
-  MessageSquare,
   Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
-import { AdminComfyUIPage } from './pages/comfyui-page';
 import { AdminTemplatesPage } from './pages/templates-page';
 import { AdminGenerationSettingsPage } from './pages/gen-settings-page';
 import { AdminQueuePage } from './pages/queue-page';
@@ -35,23 +32,20 @@ import { AdminImageEditorPage } from './pages/image-editor-page';
 import { AdminCreditsPage } from './pages/credits-page';
 import { AdminSupportPage } from './pages/support-page';
 import { AdminBannerPage } from './pages/banner-page';
-import { AdminChatProvidersPage } from './pages/chat-providers-page';
 import { AdminImageProvidersPage } from './pages/image-providers-page';
 
 export type AdminSubPage =
-  | 'chat-providers'
   | 'image-providers'
-  | 'comfyui'
+  | 'image-editor'
+  | 'credits'
+  | 'banner'
+  | 'support'
   | 'templates'
   | 'gen-settings'
   | 'queue'
   | 'storage'
   | 'users'
-  | 'logs'
-  | 'image-editor'
-  | 'credits'
-  | 'support'
-  | 'banner';
+  | 'logs';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -59,19 +53,17 @@ const SUB_PAGES: {
   icon: React.ComponentType<{ className?: string }>;
   description: string;
 }[] = [
-  { id: 'image-providers', label: 'Image Providers', icon: ImageIcon,        description: 'Manage image generation models & API keys' },
-  { id: 'chat-providers',  label: 'Chat Providers',  icon: MessageSquare,    description: 'Manage AI chat models & API keys' },
-  { id: 'comfyui',         label: 'ComfyUI',         icon: Workflow,         description: 'ComfyUI server & workflow configuration' },
-  { id: 'image-editor',    label: 'Image Editor',    icon: Wand2,            description: 'Enable/disable AI image editing feature' },
-  { id: 'credits',         label: 'Credits',         icon: Zap,              description: 'Visitor credits & cost per operation' },
-  { id: 'banner',          label: 'Banner',          icon: Megaphone,        description: 'Announcement bar shown at the top of the site' },
-  { id: 'support',         label: 'Support Links',   icon: LifeBuoy,         description: 'Manage support & social links shown to users' },
-  { id: 'templates',       label: 'Prompt Templates',icon: FileText,         description: 'Reusable prompt library' },
-  { id: 'gen-settings',    label: 'Generation Settings', icon: SlidersHorizontal, description: 'Global generation defaults' },
-  { id: 'queue',           label: 'Queue Manager',   icon: ListOrdered,      description: 'Real-time generation queue' },
-  { id: 'storage',         label: 'Storage',         icon: HardDrive,        description: 'Generated image library' },
-  { id: 'users',           label: 'User Management', icon: Users,            description: 'Roles and permissions' },
-  { id: 'logs',            label: 'System Logs',     icon: ScrollText,       description: 'API, generation, and error logs' },
+  { id: 'image-providers', label: 'Image Providers',    icon: ImageIcon,         description: 'Manage image generation models & API keys' },
+  { id: 'image-editor',    label: 'Image Editor',       icon: Wand2,             description: 'Enable/disable AI image editing feature' },
+  { id: 'credits',         label: 'Credits',            icon: Zap,               description: 'Visitor credits & cost per operation' },
+  { id: 'banner',          label: 'Banner',             icon: Megaphone,         description: 'Announcement bar shown at the top of the site' },
+  { id: 'support',         label: 'Support Links',      icon: LifeBuoy,          description: 'Manage support & social links shown to users' },
+  { id: 'templates',       label: 'Prompt Templates',   icon: FileText,          description: 'Reusable prompt library' },
+  { id: 'gen-settings',    label: 'Generation Settings',icon: SlidersHorizontal, description: 'Global generation defaults' },
+  { id: 'queue',           label: 'Queue Manager',      icon: ListOrdered,       description: 'Real-time generation queue' },
+  { id: 'storage',         label: 'Storage',            icon: HardDrive,         description: 'Generated image library' },
+  { id: 'users',           label: 'User Management',    icon: Users,             description: 'Roles and permissions' },
+  { id: 'logs',            label: 'System Logs',        icon: ScrollText,        description: 'API, generation, and error logs' },
 ];
 
 export function AdminView() {
@@ -157,18 +149,16 @@ export function AdminView() {
         <AnimatePresence mode="wait">
           <AdminPageContainer key={subPage}>
             {subPage === 'image-providers' && <AdminImageProvidersPage />}
-            {subPage === 'chat-providers'  && <AdminChatProvidersPage />}
-            {subPage === 'comfyui'         && <AdminComfyUIPage />}
+            {subPage === 'image-editor'    && <AdminImageEditorPage />}
+            {subPage === 'credits'         && <AdminCreditsPage />}
+            {subPage === 'banner'          && <AdminBannerPage />}
+            {subPage === 'support'         && <AdminSupportPage />}
             {subPage === 'templates'       && <AdminTemplatesPage />}
             {subPage === 'gen-settings'    && <AdminGenerationSettingsPage />}
             {subPage === 'queue'           && <AdminQueuePage />}
             {subPage === 'storage'         && <AdminStoragePage />}
             {subPage === 'users'           && <AdminUsersPage />}
             {subPage === 'logs'            && <AdminLogsPage />}
-            {subPage === 'image-editor'    && <AdminImageEditorPage />}
-            {subPage === 'credits'         && <AdminCreditsPage />}
-            {subPage === 'banner'          && <AdminBannerPage />}
-            {subPage === 'support'         && <AdminSupportPage />}
           </AdminPageContainer>
         </AnimatePresence>
       </div>

@@ -4,13 +4,10 @@ import {
   Images,
   History,
   FolderOpen,
-  Workflow,
-  Boxes,
   Code2,
   Shield,
   ChevronLeft,
   Wand2,
-  MessageSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
@@ -27,15 +24,12 @@ const NAV_ITEMS: {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }[] = [
-  { id: 'generate', labelKey: 'sidebar.generate', icon: Sparkles },
-  { id: 'gallery', labelKey: 'sidebar.gallery', icon: Images },
-  { id: 'history', labelKey: 'sidebar.history', icon: History },
+  { id: 'generate',    labelKey: 'sidebar.generate',    icon: Sparkles },
+  { id: 'gallery',     labelKey: 'sidebar.gallery',     icon: Images },
+  { id: 'history',     labelKey: 'sidebar.history',     icon: History },
   { id: 'collections', labelKey: 'sidebar.collections', icon: FolderOpen },
-  { id: 'workflows', labelKey: 'sidebar.workflows', icon: Workflow },
-  { id: 'models', labelKey: 'sidebar.models', icon: Boxes },
-  { id: 'chat', labelKey: 'sidebar.chat', icon: MessageSquare },
-  { id: 'api', labelKey: 'sidebar.api', icon: Code2 },
-  { id: 'admin', labelKey: 'sidebar.admin', icon: Shield, badge: 'Admin' },
+  { id: 'api',         labelKey: 'sidebar.api',         icon: Code2 },
+  { id: 'admin',       labelKey: 'sidebar.admin',       icon: Shield, badge: 'Admin' },
 ];
 
 export function Sidebar({
