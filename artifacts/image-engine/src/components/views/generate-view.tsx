@@ -210,22 +210,19 @@ export function GenerateView() {
         provider_id: provider.id,
         provider_type: provider.provider_type,
         base_url: provider.base_url,
+        api_key: provider.api_key,
         model: provider.model_name,
         prompt,
+        negative_prompt: negativePrompt || undefined,
         width: currentRatio.w,
         height: currentRatio.h,
         steps,
         cfg_scale: cfgScale,
-        quality,
         sampler,
+        quality,
       };
 
-      // For ComfyUI, route through the existing comfy endpoint
-      const endpoint = provider.provider_type === 'comfyui'
-        ? '/api/comfy/generate'
-        : '/api/generate';
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/image/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
