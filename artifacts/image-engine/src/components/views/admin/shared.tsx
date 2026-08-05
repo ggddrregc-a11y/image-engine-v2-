@@ -59,25 +59,29 @@ export function AdminButton({
   type?: 'button' | 'submit';
 }) {
   return (
-    <button
+    <motion.button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      whileHover={disabled ? {} : { scale: 1.02 }}
+      whileTap={disabled ? {} : { scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1',
         size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm',
-        variant === 'primary' && 'gradient-amber text-black hover:glow-amber',
+        variant === 'primary' && 'gradient-amber text-black hover:glow-amber active:brightness-95',
         variant === 'secondary' &&
-          'border border-border bg-card/60 text-foreground hover:border-primary/30 hover:bg-card',
+          'border border-border bg-card/60 text-foreground hover:border-primary/30 hover:bg-card active:bg-secondary',
         variant === 'ghost' &&
-          'text-muted-foreground hover:bg-secondary hover:text-foreground',
+          'text-muted-foreground hover:bg-secondary hover:text-foreground active:bg-secondary/70',
         variant === 'danger' &&
-          'border border-destructive/30 text-destructive hover:bg-destructive/10',
+          'border border-destructive/30 text-destructive hover:bg-destructive/10 active:bg-destructive/20',
         className,
       )}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 

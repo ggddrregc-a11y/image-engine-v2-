@@ -406,4 +406,9 @@
   .transition-smooth {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Button active press scale */
+  .active\:scale-\[0\.98\]:active {
+    transform: scale(0.98);
+  }
 }
