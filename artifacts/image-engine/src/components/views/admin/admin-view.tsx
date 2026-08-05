@@ -18,6 +18,7 @@ import {
   Zap,
   LifeBuoy,
   Megaphone,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
@@ -38,9 +39,11 @@ import { AdminImageEditorPage } from './pages/image-editor-page';
 import { AdminCreditsPage } from './pages/credits-page';
 import { AdminSupportPage } from './pages/support-page';
 import { AdminBannerPage } from './pages/banner-page';
+import { AdminChatProvidersPage } from './pages/chat-providers-page';
 
 export type AdminSubPage =
   | 'providers'
+  | 'chat-providers'
   | 'comfyui'
   | 'models'
   | 'templates'
@@ -61,6 +64,7 @@ const SUB_PAGES: {
   description: string;
 }[] = [
   { id: 'providers', label: 'AI Providers', icon: Server, description: 'Manage AI generation backends' },
+  { id: 'chat-providers', label: 'Chat Providers', icon: MessageSquare, description: 'Manage AI chat models & API keys' },
   { id: 'comfyui', label: 'ComfyUI', icon: Workflow, description: 'ComfyUI server & workflow configuration' },
   { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
   { id: 'credits', label: 'Credits', icon: Zap, description: 'Visitor credits & cost per operation' },
@@ -164,6 +168,7 @@ export function AdminView() {
         <AnimatePresence mode="wait">
           <AdminPageContainer key={subPage}>
             {subPage === 'providers' && <AdminProvidersPage />}
+            {subPage === 'chat-providers' && <AdminChatProvidersPage />}
             {subPage === 'comfyui' && <AdminComfyUIPage />}
             {subPage === 'models' && <AdminModelsPage />}
             {subPage === 'templates' && <AdminTemplatesPage />}
