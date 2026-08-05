@@ -31,7 +31,12 @@ import {
   Star,
   Gem,
   Flame,
+  Linkedin,
+  Mail,
+  Phone,
+  Globe2,
 } from 'lucide-react';
+import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiDiscord } from 'react-icons/si';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
@@ -52,13 +57,10 @@ const AVATARS = [
   { id: 'a10', bg: 'from-red-400 to-rose-500', icon: Flame },
 ];
 
-import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiLinkedin, SiDiscord } from 'react-icons/si';
-import { Mail, Phone, Globe2 } from 'lucide-react';
-
 const SUPPORT_ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   telegram: SiTelegram, facebook: SiFacebook, twitter: SiX, x: SiX,
   instagram: SiInstagram, youtube: SiYoutube, email: Mail, mail: Mail,
-  website: Globe2, linkedin: SiLinkedin, discord: SiDiscord, phone: Phone,
+  website: Globe2, linkedin: Linkedin, discord: SiDiscord, phone: Phone,
 };
 
 function SupportLinkIcon({ icon }: { icon: string }) {

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LifeBuoy, Save, Check, Loader2, Plus, Trash2, RotateCcw, Mail, Phone, Globe2,
+  LifeBuoy, Save, Check, Loader2, Plus, Trash2, RotateCcw, Mail, Phone, Globe2, Linkedin,
 } from 'lucide-react';
-import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiLinkedin, SiDiscord } from 'react-icons/si';
+import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiDiscord } from 'react-icons/si';
 import { supabase } from '@/lib/supabase';
 import {
   AdminCard, AdminButton, AdminLabel, AdminInput, AdminLoading,
@@ -25,7 +25,7 @@ const ICON_OPTIONS = [
   { value: 'youtube',   label: 'YouTube',    Icon: SiYoutube },
   { value: 'email',     label: 'Email',      Icon: Mail },
   { value: 'website',   label: 'Website',    Icon: Globe2 },
-  { value: 'linkedin',  label: 'LinkedIn',   Icon: SiLinkedin },
+  { value: 'linkedin',  label: 'LinkedIn',   Icon: Linkedin },
   { value: 'discord',   label: 'Discord',    Icon: SiDiscord },
   { value: 'phone',     label: 'Phone',      Icon: Phone },
 ];
