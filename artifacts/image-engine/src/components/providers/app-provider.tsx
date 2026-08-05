@@ -53,7 +53,7 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [activeView, setActiveView] = useState<ViewId>('generate');
+  const [activeView, setActiveView] = useState<ViewId>('editor');
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState('Lumen-XL v2.1');
