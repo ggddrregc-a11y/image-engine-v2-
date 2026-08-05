@@ -359,9 +359,12 @@ export function ChatView() {
                   </div>
                 </div>
 
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-1">
                   <h2 className="text-xl font-bold tracking-tight">مرحباً! كيف يمكنني مساعدتك؟</h2>
-                  <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+                  <p className="text-xs font-mono text-primary/70">
+                    {providers.find(p => p.id === selectedProviderId)?.model_name ?? 'gpt-4o-mini'}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     اسألني أي شيء، أنا هنا للمساعدة
                   </p>
                 </div>
@@ -457,9 +460,6 @@ export function ChatView() {
                 <Send className="h-4 w-4" />
               </motion.button>
             </div>
-            <p className="mt-2 text-center text-[10px] text-muted-foreground/35">
-              Powered by AI · viscodev.x10.mx
-            </p>
           </div>
         </div>
       </PageContainer>
