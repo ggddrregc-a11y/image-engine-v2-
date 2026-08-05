@@ -276,12 +276,6 @@ export function AdminComfyUIPage() {
     fetchData();
   };
 
-  const handleRenameWorkflow = async (id: string, newName: string) => {
-    if (!newName.trim()) return;
-    await supabase.from('comfyui_workflows').update({ workflow_name: newName.trim() }).eq('id', id);
-    setWorkflows((prev) => prev.map((w) => w.id === id ? { ...w, workflow_name: newName.trim() } : w));
-  };
-
   const handleReloadWorkflow = async (wf: ComfyUIWorkflow) => {
     setServerUrl(wf.server_url);
     setWorkflowName(wf.workflow_name);
@@ -552,15 +546,12 @@ export function AdminComfyUIPage() {
                       {(wf.input_nodes?.length ?? 0) + (wf.output_nodes?.length ?? 0)} nodes
                     </AdminBadge>
                   </div>
-                  <WorkflowNameEditor
-                    name={wf.workflow_name}
-                    onSave={(name) => handleRenameWorkflow(wf.id, name)}
-                  />
+                  <h4 className="mt-3 font-display text-sm font-bold">{wf.workflow_name}</h4>
                   <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">{wf.server_url}</p>
                   <div className="mt-3 flex gap-2 border-t border-border/50 pt-3">
                     <AdminButton variant="secondary" size="sm" onClick={() => handleReloadWorkflow(wf)}>
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Load
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
                     </AdminButton>
                     <button
                       onClick={() => handleDeleteWorkflow(wf.id)}
@@ -575,49 +566,6 @@ export function AdminComfyUIPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function WorkflowNameEditor({ name, onSave }: { name: string; onSave: (v: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(name);
-
-  const commit = () => {
-    setEditing(false);
-    if (value.trim() !== name) onSave(value.trim());
-  };
-
-  if (editing) {
-    return (
-      <div className="mt-3 flex items-center gap-1.5">
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setValue(name); setEditing(false); } }}
-          className="h-7 flex-1 rounded-lg border border-primary/40 bg-background/50 px-2 text-sm font-bold outline-none"
-        />
-        <button onClick={commit} className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20">
-          <Check className="h-3.5 w-3.5" />
-        </button>
-        <button onClick={() => { setValue(name); setEditing(false); }} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 flex items-center gap-1.5 group">
-      <h4 className="font-display text-sm font-bold">{name}</h4>
-      <button
-        onClick={() => setEditing(true)}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
-        title="Rename"
-      >
-        <Pencil className="h-3 w-3" />
-      </button>
     </div>
   );
 }
