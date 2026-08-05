@@ -180,7 +180,7 @@ router.post("/chat/fetch-models", async (req, res) => {
  */
 router.get("/chat/providers", async (_req, res) => {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return res.json({ ok: true, providers: [{ id: "viscodev", name: "GPT-4o Mini (Default)", model_name: "gpt-4o-mini" }] });
+    return res.json({ ok: true, providers: [] });
   }
   try {
     const r = await fetch(
@@ -189,12 +189,11 @@ router.get("/chat/providers", async (_req, res) => {
     );
     if (!r.ok) throw new Error("Supabase error");
     const data = await r.json() as ChatProvider[];
-    if (!data || data.length === 0) {
-      return res.json({ ok: true, providers: [{ id: "viscodev", name: "GPT-4o Mini (Default)", model_name: "gpt-4o-mini" }] });
-    }
-    return res.json({ ok: true, providers: data });
+    // Filter out viscodev — it works as a fallback, not a selectable provider
+    const filtered = (data ?? []).filter(p => !p.base_url?.includes("viscodev.x10.mx"));
+    return res.json({ ok: true, providers: filtered });
   } catch {
-    return res.json({ ok: true, providers: [{ id: "viscodev", name: "GPT-4o Mini (Default)", model_name: "gpt-4o-mini" }] });
+    return res.json({ ok: true, providers: [] });
   }
 });
 
@@ -211,7 +210,7 @@ router.post("/chat", async (req, res) => {
   }
 
   const provider = await getProvider(providerId);
-  if (!provider) {
+  if (!provider || provider.base_url.includes("viscodev.x10.mx")) {
     try { return res.json({ ok: true, reply: await callViscodev(message.trim()) }); }
     catch (err) { return res.status(502).json({ ok: false, error: String(err) }); }
   }
