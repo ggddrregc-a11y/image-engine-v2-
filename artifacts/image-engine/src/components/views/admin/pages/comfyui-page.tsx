@@ -17,6 +17,7 @@ import {
   AlertCircle,
   KeyRound,
   Plus,
+  Pencil,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { AIProvider, ComfyUIWorkflow, WorkflowNode, ApiConfig, AuthType } from '@/lib/admin-types';
@@ -273,6 +274,12 @@ export function AdminComfyUIPage() {
   const handleDeleteWorkflow = async (id: string) => {
     await supabase.from('comfyui_workflows').delete().eq('id', id);
     fetchData();
+  };
+
+  const handleRenameWorkflow = async (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    await supabase.from('comfyui_workflows').update({ workflow_name: newName.trim() }).eq('id', id);
+    setWorkflows((prev) => prev.map((w) => w.id === id ? { ...w, workflow_name: newName.trim() } : w));
   };
 
   const handleReloadWorkflow = async (wf: ComfyUIWorkflow) => {
@@ -536,7 +543,7 @@ export function AdminComfyUIPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <AdminCard className="p-4" >
+                <AdminCard className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-secondary">
                       <Workflow className="h-5 w-5 text-primary" />
@@ -545,7 +552,10 @@ export function AdminComfyUIPage() {
                       {(wf.input_nodes?.length ?? 0) + (wf.output_nodes?.length ?? 0)} nodes
                     </AdminBadge>
                   </div>
-                  <h4 className="mt-3 font-display text-sm font-bold">{wf.workflow_name}</h4>
+                  <WorkflowNameEditor
+                    name={wf.workflow_name}
+                    onSave={(name) => handleRenameWorkflow(wf.id, name)}
+                  />
                   <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">{wf.server_url}</p>
                   <div className="mt-3 flex gap-2 border-t border-border/50 pt-3">
                     <AdminButton variant="secondary" size="sm" onClick={() => handleReloadWorkflow(wf)}>
@@ -565,6 +575,49 @@ export function AdminComfyUIPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function WorkflowNameEditor({ name, onSave }: { name: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+
+  const commit = () => {
+    setEditing(false);
+    if (value.trim() !== name) onSave(value.trim());
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-3 flex items-center gap-1.5">
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setValue(name); setEditing(false); } }}
+          className="h-7 flex-1 rounded-lg border border-primary/40 bg-background/50 px-2 text-sm font-bold outline-none"
+        />
+        <button onClick={commit} className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20">
+          <Check className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={() => { setValue(name); setEditing(false); }} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex items-center gap-1.5 group">
+      <h4 className="font-display text-sm font-bold">{name}</h4>
+      <button
+        onClick={() => setEditing(true)}
+        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
+        title="Rename"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
     </div>
   );
 }
