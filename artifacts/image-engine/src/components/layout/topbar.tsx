@@ -17,6 +17,15 @@ import {
   BookOpen,
   Settings,
   Check,
+  Brush,
+  Waves,
+  Leaf,
+  Flower2,
+  Bot,
+  Star,
+  Sparkles,
+  Gem,
+  Flame,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,17 +40,17 @@ const PROFILE_FOOTER = [
   { icon: BookOpen, labelKey: 'topbar.documentation' },
 ] as const;
 
-const AVATAR_MAP: Record<string, { bg: string; emoji: string }> = {
-  a1: { bg: 'from-violet-500 to-purple-600', emoji: '🎨' },
-  a2: { bg: 'from-amber-400 to-orange-500', emoji: '⚡' },
-  a3: { bg: 'from-cyan-400 to-blue-500', emoji: '🌊' },
-  a4: { bg: 'from-emerald-400 to-green-500', emoji: '🌿' },
-  a5: { bg: 'from-rose-400 to-pink-500', emoji: '🌸' },
-  a6: { bg: 'from-slate-400 to-gray-600', emoji: '🤖' },
-  a7: { bg: 'from-yellow-400 to-amber-500', emoji: '⭐' },
-  a8: { bg: 'from-indigo-400 to-violet-500', emoji: '🔮' },
-  a9: { bg: 'from-teal-400 to-cyan-500', emoji: '💎' },
-  a10: { bg: 'from-red-400 to-rose-500', emoji: '🔥' },
+const AVATAR_MAP: Record<string, { bg: string; icon: React.ComponentType<{ className?: string }> }> = {
+  a1: { bg: 'from-violet-500 to-purple-600', icon: Brush },
+  a2: { bg: 'from-amber-400 to-orange-500', icon: Zap },
+  a3: { bg: 'from-cyan-400 to-blue-500', icon: Waves },
+  a4: { bg: 'from-emerald-400 to-green-500', icon: Leaf },
+  a5: { bg: 'from-rose-400 to-pink-500', icon: Flower2 },
+  a6: { bg: 'from-slate-400 to-gray-600', icon: Bot },
+  a7: { bg: 'from-yellow-400 to-amber-500', icon: Star },
+  a8: { bg: 'from-indigo-400 to-violet-500', icon: Sparkles },
+  a9: { bg: 'from-teal-400 to-cyan-500', icon: Gem },
+  a10: { bg: 'from-red-400 to-rose-500', icon: Flame },
 };
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
@@ -212,7 +221,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             aria-label="Open profile menu"
           >
             <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br text-sm', AVATAR_MAP[avatarId]?.bg ?? 'from-amber-400 to-orange-500')}>
-              {AVATAR_MAP[avatarId]?.emoji ?? '⚡'}
+              {(() => { const Icon = AVATAR_MAP[avatarId]?.icon ?? Zap; return <Icon className="h-4 w-4 text-white" />; })()}
             </div>
             <div className="hidden text-left leading-none lg:block">
               <p className="text-xs font-semibold">Alex Kim</p>
@@ -238,7 +247,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
                 {/* User header */}
                 <div className="flex items-center gap-3 border-b border-border px-4 py-3">
                   <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-lg', AVATAR_MAP[avatarId]?.bg ?? 'from-amber-400 to-orange-500')}>
-                    {AVATAR_MAP[avatarId]?.emoji ?? '⚡'}
+                    {(() => { const Icon = AVATAR_MAP[avatarId]?.icon ?? Zap; return <Icon className="h-5 w-5 text-white" />; })()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">Alex Kim</p>

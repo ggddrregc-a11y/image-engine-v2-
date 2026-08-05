@@ -13,6 +13,24 @@ import {
   LifeBuoy,
   BookOpen,
   ExternalLink,
+  Lock,
+  Ban,
+  Database,
+  Zap,
+  Monitor,
+  Sparkles,
+  Pencil,
+  Images,
+  SlidersHorizontal,
+  Languages,
+  Brush,
+  Waves,
+  Leaf,
+  Flower2,
+  Bot,
+  Star,
+  Gem,
+  Flame,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
@@ -22,19 +40,33 @@ import { t } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 const AVATARS = [
-  { id: 'a1', bg: 'from-violet-500 to-purple-600', initials: '🎨' },
-  { id: 'a2', bg: 'from-amber-400 to-orange-500', initials: '⚡' },
-  { id: 'a3', bg: 'from-cyan-400 to-blue-500', initials: '🌊' },
-  { id: 'a4', bg: 'from-emerald-400 to-green-500', initials: '🌿' },
-  { id: 'a5', bg: 'from-rose-400 to-pink-500', initials: '🌸' },
-  { id: 'a6', bg: 'from-slate-400 to-gray-600', initials: '🤖' },
-  { id: 'a7', bg: 'from-yellow-400 to-amber-500', initials: '⭐' },
-  { id: 'a8', bg: 'from-indigo-400 to-violet-500', initials: '🔮' },
-  { id: 'a9', bg: 'from-teal-400 to-cyan-500', initials: '💎' },
-  { id: 'a10', bg: 'from-red-400 to-rose-500', initials: '🔥' },
+  { id: 'a1', bg: 'from-violet-500 to-purple-600', icon: Brush },
+  { id: 'a2', bg: 'from-amber-400 to-orange-500', icon: Zap },
+  { id: 'a3', bg: 'from-cyan-400 to-blue-500', icon: Waves },
+  { id: 'a4', bg: 'from-emerald-400 to-green-500', icon: Leaf },
+  { id: 'a5', bg: 'from-rose-400 to-pink-500', icon: Flower2 },
+  { id: 'a6', bg: 'from-slate-400 to-gray-600', icon: Bot },
+  { id: 'a7', bg: 'from-yellow-400 to-amber-500', icon: Star },
+  { id: 'a8', bg: 'from-indigo-400 to-violet-500', icon: Sparkles },
+  { id: 'a9', bg: 'from-teal-400 to-cyan-500', icon: Gem },
+  { id: 'a10', bg: 'from-red-400 to-rose-500', icon: Flame },
 ];
 
-const SECTIONS = [
+import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiLinkedin, SiDiscord } from 'react-icons/si';
+import { Mail, Phone, Globe2 } from 'lucide-react';
+
+const SUPPORT_ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
+  telegram: SiTelegram, facebook: SiFacebook, twitter: SiX, x: SiX,
+  instagram: SiInstagram, youtube: SiYoutube, email: Mail, mail: Mail,
+  website: Globe2, linkedin: SiLinkedin, discord: SiDiscord, phone: Phone,
+};
+
+function SupportLinkIcon({ icon }: { icon: string }) {
+  const key = icon.toLowerCase().replace(/[^a-z]/g, '');
+  const Icon = SUPPORT_ICON_MAP[key];
+  if (Icon) return <Icon className="h-5 w-5 shrink-0 text-primary" size={20} />;
+  return <Globe2 className="h-5 w-5 shrink-0 text-primary" />;
+}
   { id: 'profile', labelKey: 'settings.section.profile', icon: User },
   { id: 'appearance', labelKey: 'settings.section.appearance', icon: Palette },
   { id: 'notifications', labelKey: 'settings.section.notifications', icon: Bell },
@@ -260,38 +292,38 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
               {/* Security tips */}
               {[
                 {
-                  icon: '🔒',
+                  icon: Lock,
                   title: 'End-to-End Encryption',
                   desc: 'All images and prompts are transmitted over HTTPS with TLS 1.3 encryption.',
                 },
                 {
-                  icon: '🛡️',
+                  icon: Shield,
                   title: 'No Data Stored Permanently',
                   desc: 'Generated images are stored temporarily and never shared with third parties.',
                 },
                 {
-                  icon: '🍪',
+                  icon: Database,
                   title: 'Local Storage Only',
                   desc: 'Your preferences (theme, avatar, credits) are saved only in your browser — never on a server.',
                 },
                 {
-                  icon: '🚫',
+                  icon: Ban,
                   title: 'No Tracking',
                   desc: 'We do not use advertising trackers or sell your data to any third party.',
                 },
                 {
-                  icon: '⚡',
+                  icon: Zap,
                   title: 'Secure API Connections',
                   desc: 'All AI generation requests are routed through our secure backend — your API keys are never exposed.',
                 },
                 {
-                  icon: '🌐',
+                  icon: Monitor,
                   title: 'Browser Security',
                   desc: 'For best security, keep your browser up to date and avoid using shared or public devices.',
                 },
               ].map((item) => (
                 <div key={item.title} className="flex gap-4 rounded-xl border border-border bg-card/40 p-4">
-                  <span className="text-2xl">{item.icon}</span>
+                  <item.icon className="mt-0.5 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">{item.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
@@ -371,7 +403,7 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
                       className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-4 transition-all hover:border-primary/30 hover:bg-card"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{link.icon}</span>
+                        <SupportLinkIcon icon={link.icon} />
                         <span className="text-sm font-medium">{link.label}</span>
                       </div>
                       <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -388,38 +420,38 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
               <p className="text-sm text-muted-foreground">Learn how to get the most out of Image Engine.</p>
               {[
                 {
-                  emoji: '🎨',
+                  icon: Sparkles,
                   title: 'Generate Images',
                   desc: 'Go to the Generate section, write a detailed prompt describing the image you want, choose your settings (model, aspect ratio, quality), then press Generate.',
                 },
                 {
-                  emoji: '✏️',
+                  icon: Pencil,
                   title: 'Edit Images',
                   desc: 'Go to the Editor section, upload any image, write a description of the change you want (e.g. "add a blue sky background"), then press Edit Image.',
                 },
                 {
-                  emoji: '⚡',
+                  icon: Zap,
                   title: 'Credits System',
                   desc: 'Every visitor starts with a set number of credits. Each generation or edit costs a certain amount. Credits are stored in your browser.',
                 },
                 {
-                  emoji: '🖼️',
+                  icon: Images,
                   title: 'Gallery & History',
                   desc: 'All your generated images are saved in the Gallery. You can view, favorite, and download them from there.',
                 },
                 {
-                  emoji: '🔧',
+                  icon: SlidersHorizontal,
                   title: 'Advanced Settings',
                   desc: 'In the Generate section, expand "Generation Settings" to control steps, CFG scale, sampler, and batch count for fine-tuned results.',
                 },
                 {
-                  emoji: '🌍',
+                  icon: Languages,
                   title: 'Language',
                   desc: 'You can switch the interface language between English and Arabic from Settings → Language.',
                 },
               ].map((item) => (
                 <div key={item.title} className="flex gap-4 rounded-xl border border-border bg-card/40 p-4">
-                  <span className="text-2xl">{item.emoji}</span>
+                  <item.icon className="mt-0.5 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">{item.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
@@ -458,10 +490,12 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
 }
 
 function AvatarDisplay({ avatar, size = 'md' }: { avatar: typeof AVATARS[0]; size?: 'md' | 'lg' }) {
-  const sizeClass = size === 'lg' ? 'h-16 w-16 text-2xl' : 'h-14 w-14 text-xl';
+  const sizeClass = size === 'lg' ? 'h-16 w-16' : 'h-14 w-14';
+  const iconClass = size === 'lg' ? 'h-7 w-7' : 'h-6 w-6';
+  const Icon = avatar.icon;
   return (
     <div className={cn('flex items-center justify-center rounded-2xl bg-gradient-to-br', sizeClass, avatar.bg)}>
-      {avatar.initials}
+      <Icon className={cn(iconClass, 'text-white')} />
     </div>
   );
 }

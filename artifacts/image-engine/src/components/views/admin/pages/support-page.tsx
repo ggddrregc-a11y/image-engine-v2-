@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LifeBuoy, Save, Check, Loader2, Plus, Trash2, RotateCcw,
+  LifeBuoy, Save, Check, Loader2, Plus, Trash2, RotateCcw, Mail, Phone, Globe2,
 } from 'lucide-react';
+import { SiTelegram, SiFacebook, SiX, SiInstagram, SiYoutube, SiLinkedin, SiDiscord } from 'react-icons/si';
 import { supabase } from '@/lib/supabase';
 import {
   AdminCard, AdminButton, AdminLabel, AdminInput, AdminLoading,
@@ -17,17 +18,23 @@ interface SupportLink {
 }
 
 const ICON_OPTIONS = [
-  { value: '💬', label: 'Telegram' },
-  { value: '📘', label: 'Facebook' },
-  { value: '🐦', label: 'X / Twitter' },
-  { value: '📸', label: 'Instagram' },
-  { value: '▶️', label: 'YouTube' },
-  { value: '📧', label: 'Email' },
-  { value: '🌐', label: 'Website' },
-  { value: '💼', label: 'LinkedIn' },
-  { value: '🎮', label: 'Discord' },
-  { value: '📞', label: 'Phone' },
+  { value: 'telegram',  label: 'Telegram',   Icon: SiTelegram },
+  { value: 'facebook',  label: 'Facebook',   Icon: SiFacebook },
+  { value: 'twitter',   label: 'X / Twitter',Icon: SiX },
+  { value: 'instagram', label: 'Instagram',  Icon: SiInstagram },
+  { value: 'youtube',   label: 'YouTube',    Icon: SiYoutube },
+  { value: 'email',     label: 'Email',      Icon: Mail },
+  { value: 'website',   label: 'Website',    Icon: Globe2 },
+  { value: 'linkedin',  label: 'LinkedIn',   Icon: SiLinkedin },
+  { value: 'discord',   label: 'Discord',    Icon: SiDiscord },
+  { value: 'phone',     label: 'Phone',      Icon: Phone },
 ];
+
+function SupportIconDisplay({ value, className }: { value: string; className?: string }) {
+  const opt = ICON_OPTIONS.find((o) => o.value === value);
+  const Icon = opt?.Icon ?? Globe2;
+  return <Icon className={className} size={18} />;
+}
 
 export function AdminSupportPage() {
   const [links, setLinks] = useState<SupportLink[]>([]);
@@ -52,7 +59,7 @@ export function AdminSupportPage() {
       id: `new-${Date.now()}`,
       label: '',
       url: '',
-      icon: '💬',
+      icon: 'telegram',
       sort_order: links.length,
     };
     setLinks((prev) => [...prev, newLink]);
@@ -122,15 +129,18 @@ export function AdminSupportPage() {
             {links.map((link) => (
               <div key={link.id} className="grid grid-cols-[40px_1fr_2fr_32px] items-center gap-2 rounded-xl border border-border bg-card/40 p-3">
                 {/* Icon picker */}
-                <select
-                  value={link.icon}
-                  onChange={(e) => updateLink(link.id, 'icon', e.target.value)}
-                  className="h-9 w-full rounded-lg border border-border bg-card text-center text-lg outline-none focus:border-primary/40"
-                >
-                  {ICON_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.value}</option>
-                  ))}
-                </select>
+                <div className="relative flex h-9 w-full items-center justify-center rounded-lg border border-border bg-card">
+                  <SupportIconDisplay value={link.icon} className="text-primary" />
+                  <select
+                    value={link.icon}
+                    onChange={(e) => updateLink(link.id, 'icon', e.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  >
+                    {ICON_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Label */}
                 <input
