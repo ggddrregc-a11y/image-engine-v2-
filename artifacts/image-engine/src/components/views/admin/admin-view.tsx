@@ -17,6 +17,7 @@ import {
   Wand2,
   Zap,
   LifeBuoy,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
@@ -36,6 +37,7 @@ import { useApp } from '@/components/providers/app-provider';
 import { AdminImageEditorPage } from './pages/image-editor-page';
 import { AdminCreditsPage } from './pages/credits-page';
 import { AdminSupportPage } from './pages/support-page';
+import { AdminBannerPage } from './pages/banner-page';
 
 export type AdminSubPage =
   | 'providers'
@@ -49,7 +51,8 @@ export type AdminSubPage =
   | 'logs'
   | 'image-editor'
   | 'credits'
-  | 'support';
+  | 'support'
+  | 'banner';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -61,6 +64,7 @@ const SUB_PAGES: {
   { id: 'comfyui', label: 'ComfyUI', icon: Workflow, description: 'ComfyUI server & workflow configuration' },
   { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
   { id: 'credits', label: 'Credits', icon: Zap, description: 'Visitor credits & cost per operation' },
+  { id: 'banner', label: 'Banner', icon: Megaphone, description: 'Announcement bar shown at the top of the site' },
   { id: 'support', label: 'Support Links', icon: LifeBuoy, description: 'Manage support & social links shown to users' },
   { id: 'models', label: 'Models', icon: Boxes, description: 'Model definitions and defaults' },
   { id: 'templates', label: 'Prompt Templates', icon: FileText, description: 'Reusable prompt library' },
@@ -170,6 +174,7 @@ export function AdminView() {
             {subPage === 'logs' && <AdminLogsPage />}
             {subPage === 'image-editor' && <AdminImageEditorPage />}
             {subPage === 'credits' && <AdminCreditsPage />}
+            {subPage === 'banner' && <AdminBannerPage />}
             {subPage === 'support' && <AdminSupportPage />}
           </AdminPageContainer>
         </AnimatePresence>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './sidebar';
 import { TopBar } from './topbar';
 import { Footer } from './footer';
+import { AnnouncementBar } from './announcement-bar';
 import { AppProvider, useApp } from '@/components/providers/app-provider';
 import { AdminAuthProvider } from '@/components/providers/admin-auth-provider';
 import { ViewRouter } from '@/components/views/view-router';
@@ -61,6 +62,7 @@ function ShellContent() {
 
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col">
+        <AnnouncementBar />
         <TopBar onMenu={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-hidden">
           <ViewRouter />
