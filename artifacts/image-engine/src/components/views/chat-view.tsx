@@ -4,22 +4,38 @@ import {
   MessageSquare,
   Send,
   RotateCcw,
-  Copy,
-  Check,
-  Bot,
-  User,
   Sparkles,
   Code2,
   Zap,
   Globe,
-  ThumbsUp,
-  ThumbsDown,
-  Share,
-  Download,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+/* ── Custom PNG icon component ──────────────────────────────────── */
+function Icon({
+  src,
+  size = 16,
+  className,
+  invert = true,
+}: {
+  src: string;
+  size?: number;
+  className?: string;
+  invert?: boolean;
+}) {
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className={cn('shrink-0 select-none', invert && 'invert opacity-70', className)}
+      draggable={false}
+    />
+  );
+}
 
 interface Message {
   id: string;
@@ -46,7 +62,9 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
           className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
-          {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+          {copied
+            ? <Icon src="/icons/checked.png" size={12} />
+            : <Icon src="/icons/copy.png" size={12} />}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -124,7 +142,10 @@ function MessageBubble({
         'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2',
         isUser ? 'bg-primary ring-primary/20 text-black' : 'bg-card ring-border text-muted-foreground',
       )}>
-        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+        {isUser
+          ? <Icon src="/icons/user.png" size={14} invert={false} className="opacity-80" />
+          : <Icon src="/icons/bot.png" size={14} invert={false} className="opacity-80" />
+        }
       </div>
 
       {/* Bubble */}
@@ -149,13 +170,14 @@ function MessageBubble({
             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <button onClick={() => onCopy(msg.id, msg.content)} className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Copy">
-            {copiedId === msg.id ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+            {copiedId === msg.id
+              ? <Icon src="/icons/checked.png" size={12} />
+              : <Icon src="/icons/copy.png" size={12} />}
           </button>
           {!isUser && (<>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Like"><ThumbsUp className="h-3 w-3" /></button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Dislike"><ThumbsDown className="h-3 w-3" /></button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Share"><Share className="h-3 w-3" /></button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Save"><Download className="h-3 w-3" /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="Like"><Icon src="/icons/like.png" size={12} /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="Dislike"><Icon src="/icons/dont-like.png" size={12} /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="History"><Icon src="/icons/history.png" size={12} /></button>
           </>)}
         </div>
       </div>
@@ -245,7 +267,7 @@ export function ChatView() {
                 onClick={handleClear}
                 className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
               >
-                <RotateCcw className="h-3 w-3" />
+                <Icon src="/icons/plus.png" size={12} />
                 محادثة جديدة
               </button>
             ) : undefined
@@ -266,10 +288,10 @@ export function ChatView() {
                 {/* Avatar */}
                 <div className="relative">
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-border bg-card shadow-lg">
-                    <Bot className="h-10 w-10 text-primary" />
+                    <Icon src="/icons/bot.png" size={40} invert={false} className="opacity-80" />
                   </div>
                   <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary">
-                    <Check className="h-3 w-3 text-black" />
+                    <Icon src="/icons/checked.png" size={12} invert={false} className="brightness-0" />
                   </div>
                 </div>
 
@@ -323,8 +345,8 @@ export function ChatView() {
                   transition={{ duration: 0.15 }}
                   className="flex items-end gap-3"
                 >
-                  <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card ring-2 ring-border text-muted-foreground">
-                    <Bot className="h-3.5 w-3.5" />
+                  <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card ring-2 ring-border">
+                    <Icon src="/icons/bot.png" size={14} invert={false} className="opacity-70" />
                   </div>
                   <div className="rounded-2xl rounded-bl-sm border border-border/80 bg-card px-5 py-3.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
@@ -357,6 +379,10 @@ export function ChatView() {
                 className="flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 disabled:opacity-50"
                 style={{ maxHeight: 180 }}
               />
+            <div className="flex items-end gap-2">
+              <button className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 transition-colors hover:border-primary/30 hover:bg-secondary" title="Attach">
+                <Icon src="/icons/attach.png" size={16} />
+              </button>
               <motion.button
                 whileTap={{ scale: 0.93 }}
                 onClick={() => sendMessage(input)}
@@ -365,11 +391,12 @@ export function ChatView() {
                   'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
                   input.trim() && !isLoading
                     ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
-                    : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
+                    : 'cursor-not-allowed bg-secondary opacity-50',
                 )}
               >
-                <Send className="h-4 w-4" />
+                <Icon src="/icons/mic.png" size={16} invert={false} className={cn(input.trim() && !isLoading ? 'brightness-0' : 'opacity-30')} />
               </motion.button>
+            </div>
             </div>
             <p className="mt-2 text-center text-[10px] text-muted-foreground/35">
               Powered by GPT-4o Mini · viscodev.x10.mx
