@@ -5,7 +5,8 @@ import type { Locale } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 const CREDITS_KEY = 'ie_credits';
-const AVATAR_KEY = 'ie_avatar';
+const AVATAR_KEY  = 'ie_avatar';
+const VIEW_KEY    = 'ie_active_view';
 const DEFAULT_INITIAL_CREDITS = 100;
 
 interface AppContextValue {
@@ -53,7 +54,16 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [activeView, setActiveView] = useState<ViewId>('editor');
+  const VALID_VIEWS: ViewId[] = ['generate', 'editor', 'gallery', 'history', 'collections', 'api', 'settings', 'admin'];
+  const storedView = window.localStorage.getItem(VIEW_KEY) as ViewId | null;
+  const initialView: ViewId = storedView && VALID_VIEWS.includes(storedView) ? storedView : 'generate';
+
+  const [activeView, setActiveViewState] = useState<ViewId>(initialView);
+
+  const setActiveView = useCallback((v: ViewId) => {
+    setActiveViewState(v);
+    window.localStorage.setItem(VIEW_KEY, v);
+  }, []);
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState('Lumen-XL v2.1');

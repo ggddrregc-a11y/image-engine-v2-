@@ -4,10 +4,7 @@ export type ViewId =
   | 'gallery'
   | 'history'
   | 'collections'
-  | 'workflows'
-  | 'models'
   | 'api'
-  | 'chat'
   | 'settings'
   | 'admin';
 
