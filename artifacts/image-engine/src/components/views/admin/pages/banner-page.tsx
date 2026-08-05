@@ -68,10 +68,13 @@ export function AdminBannerPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from('banner_config').upsert({ ...config, id: 'main' });
+    const { error } = await supabase.from('banner_config').upsert({ ...config, id: 'main' });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!error) {
+      window.sessionStorage.removeItem('ie_banner_dismissed');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const set = <K extends keyof BannerConfig>(key: K, value: BannerConfig[K]) =>
@@ -102,7 +105,14 @@ export function AdminBannerPage() {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="text-sm">{config.icon}</span>
+              {(() => {
+                const PreviewIcon = ICON_OPTIONS.find((o) => o.value === config.icon)?.Icon ?? Sparkles;
+                return (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                    <PreviewIcon className="h-3.5 w-3.5 text-white" />
+                  </span>
+                );
+              })()}
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-white/80" />

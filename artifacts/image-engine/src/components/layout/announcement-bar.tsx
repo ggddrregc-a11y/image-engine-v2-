@@ -46,8 +46,8 @@ export function AnnouncementBar() {
       .maybeSingle()
       .then(({ data }) => {
         if (!data || !data.enabled) return;
-        const dismissed = window.sessionStorage.getItem(DISMISS_KEY);
-        if (dismissed === data.text) return;
+        const dismissedText = window.sessionStorage.getItem(DISMISS_KEY);
+        if (dismissedText === data.text) return;
         setConfig(data as BannerConfig);
         setVisible(true);
       });
