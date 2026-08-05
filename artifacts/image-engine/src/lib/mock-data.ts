@@ -61,9 +61,8 @@ export const FAVORITE_PROMPTS = [
 export const SAMPLE_IMAGES: GeneratedImage[] = [
   {
     id: 'img-1',
-    url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
-    prompt:
-      'cinematic portrait of a woman, soft rim lighting, shallow depth of field, 85mm lens, golden hour, photorealistic',
+    url: '/samples/prompthero-1785936747933.png',
+    prompt: 'cinematic portrait of a woman, soft rim lighting, shallow depth of field, 85mm lens, golden hour, photorealistic',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1024,
@@ -78,9 +77,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-2',
-    url: 'https://images.unsplash.com/photo-1518791841217-8f162f1912da?w=900&q=80',
-    prompt:
-      'neon-soaked cyberpunk megacity at night, rain-slick streets, towering holograms, volumetric fog',
+    url: '/samples/prompthero-1785936760684.png',
+    prompt: 'neon-soaked cyberpunk megacity at night, rain-slick streets, towering holograms, volumetric fog',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1536,
@@ -94,9 +92,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-3',
-    url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
-    prompt:
-      'epic fantasy landscape, floating islands above misty valleys, cascading waterfalls, dramatic god rays',
+    url: '/samples/prompthero-1785936771220.png',
+    prompt: 'epic fantasy landscape, floating islands above misty valleys, cascading waterfalls, dramatic god rays',
     model: 'DreamShaper v8',
     width: 1536,
     height: 1024,
@@ -111,9 +108,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-4',
-    url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-    prompt:
-      'studio product photography of a glass perfume bottle, seamless gradient background, soft box lighting',
+    url: '/samples/prompthero-1785936787347.jpeg',
+    prompt: 'studio product photography of a glass perfume bottle, seamless gradient background, soft box lighting',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1024,
@@ -127,9 +123,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-5',
-    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=900&q=80',
-    prompt:
-      'fluid abstract composition, iridescent metallic textures, flowing organic shapes, dark background, octane render',
+    url: '/samples/prompthero-1785936839859.png',
+    prompt: 'fluid abstract composition, iridescent metallic textures, flowing organic shapes, dark background, octane render',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1024,
@@ -143,9 +138,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-6',
-    url: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80',
-    prompt:
-      'minimalist architecture, concrete and glass, brutalist, moody overcast light',
+    url: '/samples/prompthero-1785936860624.jpeg',
+    prompt: 'minimalist architecture, concrete and glass, brutalist, moody overcast light',
     model: 'DreamShaper v8',
     width: 1536,
     height: 1024,
@@ -159,9 +153,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-7',
-    url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=900&q=80',
-    prompt:
-      'ethereal forest spirit, bioluminescent flora, mystical atmosphere, trending on artstation',
+    url: '/samples/prompthero-1785936872958.jpeg',
+    prompt: 'ethereal forest spirit, bioluminescent flora, mystical atmosphere, trending on artstation',
     model: 'DreamShaper v8',
     width: 832,
     height: 1216,
@@ -175,9 +168,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-8',
-    url: 'https://images.unsplash.com/photo-1462332420958-a05d1e002413?w=900&q=80',
-    prompt:
-      'retro-futuristic spaceship interior, warm amber lighting, control panels, sci-fi concept art',
+    url: '/samples/prompthero-1785936885820.jpeg',
+    prompt: 'retro-futuristic spaceship interior, warm amber lighting, control panels, sci-fi concept art',
     model: 'Lumen-XL v2.1',
     width: 1536,
     height: 1024,
@@ -191,9 +183,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-9',
-    url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&q=80',
-    prompt:
-      'underwater coral reef city, bioluminescent creatures, cinematic, hyperreal',
+    url: '/samples/prompthero-1785936901818.jpeg',
+    prompt: 'underwater coral reef city, bioluminescent creatures, cinematic, hyperreal',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1024,
@@ -208,9 +199,8 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
   },
   {
     id: 'img-10',
-    url: 'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=900&q=80',
-    prompt:
-      'macro photography of a dewdrop on a leaf, morning mist, bokeh background, ultra sharp',
+    url: '/samples/prompthero-1785936917814.png',
+    prompt: 'macro photography of a dewdrop on a leaf, morning mist, bokeh background, ultra sharp',
     model: 'Lumen-XL v2.1',
     width: 1024,
     height: 1024,
@@ -222,38 +212,6 @@ export const SAMPLE_IMAGES: GeneratedImage[] = [
     favorite: false,
     status: 'complete',
   },
-  {
-    id: 'img-11',
-    url: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=900&q=80',
-    prompt:
-      'anime key visual of a swordsman, dynamic pose, detailed eyes, cel shading, vibrant colors',
-    model: 'AnythingV5',
-    width: 832,
-    height: 1216,
-    steps: 28,
-    cfgScale: 7,
-    sampler: 'Euler a',
-    seed: 2099441,
-    createdAt: '2026-07-29T08:15:00Z',
-    favorite: false,
-    status: 'complete',
-  },
-  {
-    id: 'img-12',
-    url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=900&q=80',
-    prompt:
-      'character concept sheet, armored knight, multiple angles, turnaround, clean background',
-    model: 'AnythingV5',
-    width: 1024,
-    height: 1536,
-    steps: 32,
-    cfgScale: 7,
-    sampler: 'Euler a',
-    seed: 8810234,
-    createdAt: '2026-07-28T22:30:00Z',
-    favorite: false,
-    status: 'complete',
-  },
 ];
 
 export const COLLECTIONS: Collection[] = [
@@ -261,7 +219,7 @@ export const COLLECTIONS: Collection[] = [
     id: 'c1',
     name: 'Portraits',
     description: 'Character studies and cinematic portraits',
-    coverUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
+    coverUrl: '/samples/prompthero-1785936747933.png',
     count: 24,
     createdAt: '2026-07-15T10:00:00Z',
   },
@@ -269,7 +227,7 @@ export const COLLECTIONS: Collection[] = [
     id: 'c2',
     name: 'Fantasy Worlds',
     description: 'Landscapes and ethereal environments',
-    coverUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
+    coverUrl: '/samples/prompthero-1785936771220.png',
     count: 47,
     createdAt: '2026-07-10T10:00:00Z',
   },
@@ -277,7 +235,7 @@ export const COLLECTIONS: Collection[] = [
     id: 'c3',
     name: 'Product Shots',
     description: 'Commercial product photography renders',
-    coverUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
+    coverUrl: '/samples/prompthero-1785936787347.jpeg',
     count: 18,
     createdAt: '2026-07-20T10:00:00Z',
   },
@@ -285,7 +243,7 @@ export const COLLECTIONS: Collection[] = [
     id: 'c4',
     name: 'Experiments',
     description: 'Abstract and exploratory compositions',
-    coverUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=900&q=80',
+    coverUrl: '/samples/prompthero-1785936839859.png',
     count: 31,
     createdAt: '2026-07-05T10:00:00Z',
   },
