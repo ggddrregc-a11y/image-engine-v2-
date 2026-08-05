@@ -130,11 +130,11 @@ function MessageBubble({
       {/* Avatar */}
       <div className={cn(
         'mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2',
-        isUser ? 'bg-primary ring-primary/20 text-black' : 'bg-card ring-border text-muted-foreground',
+        isUser ? 'bg-primary ring-primary/20' : 'bg-primary/10 ring-primary/30',
       )}>
         {isUser
-          ? <User className="h-3.5 w-3.5" />
-          : <img src="/icons/bot.png" alt="bot" width={14} height={14} className="opacity-70" />
+          ? <User className="h-4 w-4 text-black" />
+          : <Bot className="h-4 w-4 text-primary" />
         }
       </div>
 
@@ -195,7 +195,7 @@ function ModelSelector({
         className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
       >
         <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15">
-          <img src="/icons/bot.png" alt="" width={10} height={10} className="opacity-70" />
+          <Bot className="h-2.5 w-2.5 text-primary" />
         </div>
         <span className="max-w-[140px] truncate">{selected?.name ?? 'اختر نموذج'}</span>
         <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
@@ -257,9 +257,18 @@ function ModelSelector({
 }
 
 /* ── Main ───────────────────────────────────────────────────────── */
+const STORAGE_KEY = 'chat_messages';
+
 export function ChatView() {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved) as { id: string; role: string; content: string; timestamp: string }[];
+      return parsed.map(m => ({ ...m, role: m.role as 'user' | 'assistant', timestamp: new Date(m.timestamp) }));
+    } catch { return []; }
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -286,6 +295,13 @@ export function ChatView() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Save messages to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch { /* quota exceeded */ }
+  }, [messages]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -338,7 +354,12 @@ export function ChatView() {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleClear = () => { setMessages([]); setInput(''); setLatestId(null); };
+  const handleClear = () => {
+    setMessages([]);
+    setInput('');
+    setLatestId(null);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
@@ -375,8 +396,8 @@ export function ChatView() {
               >
                 {/* Avatar with bot icon + checked */}
                 <div className="relative">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-border bg-card shadow-lg">
-                    <img src="/icons/bot.png" alt="AI" width={40} height={40} className="opacity-80" />
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-primary/30 bg-primary/10 shadow-lg">
+                    <Bot className="h-10 w-10 text-primary" />
                   </div>
                   <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary">
                     <img src="/icons/checked.png" alt="online" width={12} height={12} className="brightness-0" />
@@ -436,8 +457,8 @@ export function ChatView() {
                   transition={{ duration: 0.15 }}
                   className="flex items-end gap-3"
                 >
-                  <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card ring-2 ring-border">
-                    <img src="/icons/bot.png" alt="bot" width={14} height={14} className="opacity-70" />
+                  <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/30">
+                    <Bot className="h-4 w-4 text-primary" />
                   </div>
                   <div className="rounded-2xl rounded-bl-sm border border-border/80 bg-card px-5 py-3.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
