@@ -190,7 +190,7 @@ export function AdminChatProvidersPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-1.5">
                     {!p.is_default && (
-                      <AdminButton variant="secondary" size="sm" onClick={() => handleSetDefault(p)} title="Set as default">
+                      <AdminButton variant="secondary" size="sm" onClick={() => handleSetDefault(p)}>
                         <Star className="h-3.5 w-3.5" />
                         Set Default
                       </AdminButton>
