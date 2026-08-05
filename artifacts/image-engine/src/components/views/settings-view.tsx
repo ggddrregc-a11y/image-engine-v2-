@@ -67,6 +67,8 @@ function SupportLinkIcon({ icon }: { icon: string }) {
   if (Icon) return <Icon className="h-5 w-5 shrink-0 text-primary" size={20} />;
   return <Globe2 className="h-5 w-5 shrink-0 text-primary" />;
 }
+
+const SECTIONS = [
   { id: 'profile', labelKey: 'settings.section.profile', icon: User },
   { id: 'appearance', labelKey: 'settings.section.appearance', icon: Palette },
   { id: 'notifications', labelKey: 'settings.section.notifications', icon: Bell },
