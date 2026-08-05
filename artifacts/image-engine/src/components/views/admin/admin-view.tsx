@@ -121,7 +121,7 @@ export function AdminView() {
       </div>
 
       {/* Sub-navigation */}
-      <div className="mt-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      <div className="mt-6 flex gap-2 overflow-x-auto scrollbar-thin pb-2">
         {SUB_PAGES.map((p) => {
           const Icon = p.icon;
           const active = subPage === p.id;
