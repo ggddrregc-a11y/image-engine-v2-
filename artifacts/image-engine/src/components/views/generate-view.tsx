@@ -99,34 +99,30 @@ export function GenerateView() {
 
   // Fetch recent images from gallery
   useEffect(() => {
-    supabase
-      .from('stored_images')
-      .select('id, url, prompt')
-      .order('created_at', { ascending: false })
-      .limit(12)
-      .then(({ data, error }) => {
+    const fallback = SAMPLE_IMAGES.slice(0, 12).map((img) => ({
+      id: img.id,
+      url: img.url,
+      prompt: img.prompt,
+    }));
+
+    const fetchRecent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('stored_images')
+          .select('id, url, prompt')
+          .order('created_at', { ascending: false })
+          .limit(12);
         if (!error && data && data.length > 0) {
           setRecentResults(data);
         } else {
-          // Fallback to sample images when Supabase is empty or unavailable
-          setRecentResults(
-            SAMPLE_IMAGES.slice(0, 12).map((img) => ({
-              id: img.id,
-              url: img.url,
-              prompt: img.prompt,
-            })),
-          );
+          setRecentResults(fallback);
         }
-      })
-      .catch(() => {
-        setRecentResults(
-          SAMPLE_IMAGES.slice(0, 12).map((img) => ({
-            id: img.id,
-            url: img.url,
-            prompt: img.prompt,
-          })),
-        );
-      });
+      } catch {
+        setRecentResults(fallback);
+      }
+    };
+
+    fetchRecent();
   }, []);
 
   // Auto-rotate recent images slideshow
