@@ -100,8 +100,12 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 
       {/* Site name */}
       <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-amber text-xs font-bold text-black">
-          IE
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-amber">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 12C10.5 10 8.5 8.5 6.5 8.5C4 8.5 2 10.2 2 12C2 13.8 4 15.5 6.5 15.5C8.5 15.5 10.5 14 12 12Z" stroke="#1a1a1a" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+            <path d="M12 12C13.5 10 15.5 8.5 17.5 8.5C20 8.5 22 10.2 22 12C22 13.8 20 15.5 17.5 15.5C15.5 15.5 13.5 14 12 12Z" stroke="#1a1a1a" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+            <circle cx="19.5" cy="7.5" r="1.5" fill="#1a1a1a"/>
+          </svg>
         </span>
         <span className="hidden text-sm font-medium md:inline">Image Engine</span>
       </div>
