@@ -89,6 +89,10 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
   const { locale, setLocale, avatarId, setAvatarId, credits, settingsSection, setSettingsSection } = useApp();
   const [selectedAvatar, setSelectedAvatar] = useState(avatarId);
   const [savedAvatar, setSavedAvatar] = useState(avatarId);
+  const [displayName, setDisplayName] = useState('Alex Kim');
+  const [email, setEmail] = useState('alex@lumen.ai');
+  const [username, setUsername] = useState('@alexkim');
+  const [profileSaved, setProfileSaved] = useState(false);
   const [supportLinks, setSupportLinks] = useState<{ id: string; label: string; url: string; icon: string }[]>([]);
   const [notifications, setNotifications] = useState({
     generationComplete: true,
@@ -191,18 +195,29 @@ export function SettingsView({ initialSection }: { initialSection?: string }) {
                   ))}
                 </div>
               </div>
-              <Field label={t(locale, 'settings.profile.displayName')} value="Alex Kim" />
-              <Field label={t(locale, 'settings.profile.email')} value="alex@lumen.ai" />
-              <Field label={t(locale, 'settings.profile.username')} value="@alexkim" />
+              <Field label={t(locale, 'settings.profile.displayName')} value={displayName} onChange={setDisplayName} />
+              <Field label={t(locale, 'settings.profile.email')} value={email} onChange={setEmail} />
+              <Field label={t(locale, 'settings.profile.username')} value={username} onChange={setUsername} />
+              <div className="flex items-center gap-3">
               <button
                 onClick={() => {
                   setSavedAvatar(selectedAvatar);
                   setAvatarId(selectedAvatar);
+                  window.localStorage.setItem('ie_display_name', displayName);
+                  window.localStorage.setItem('ie_username', username);
+                  setProfileSaved(true);
+                  setTimeout(() => setProfileSaved(false), 2000);
                 }}
                 className="rounded-xl gradient-amber px-4 py-2.5 text-sm font-semibold text-black transition-all hover:glow-amber"
               >
                 {t(locale, 'settings.profile.saveChanges')}
               </button>
+              {profileSaved && (
+                <span className="flex items-center gap-1.5 text-sm text-success">
+                  <Check className="h-4 w-4" /> Saved
+                </span>
+              )}
+              </div>
             </div>
           )}
 
@@ -507,20 +522,21 @@ function AvatarDisplay({ avatar, size = 'md' }: { avatar: typeof AVATARS[0]; siz
 function Field({
   label,
   value,
+  onChange,
   type = 'text',
 }: {
   label: string;
   value: string;
+  onChange?: (v: string) => void;
   type?: string;
 }) {
-  const [v, setV] = useState(value);
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium">{label}</label>
       <input
         type={type}
-        value={v}
-        onChange={(e) => setV(e.target.value)}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
         className="h-10 w-full rounded-xl border border-border bg-background/50 px-3 text-sm outline-none transition-colors focus:border-primary/40"
       />
     </div>
