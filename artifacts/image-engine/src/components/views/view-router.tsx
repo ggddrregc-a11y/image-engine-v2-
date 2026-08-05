@@ -6,26 +6,20 @@ import { EditorView } from './editor-view';
 import { GalleryView } from './gallery-view';
 import { HistoryView } from './history-view';
 import { CollectionsView } from './collections-view';
-import { WorkflowsView } from './workflows-view';
-import { ModelsView } from './models-view';
 import { ApiView } from './api-view';
 import { SettingsView } from './settings-view';
 import { AdminView } from './admin/admin-view';
-import { ChatView } from './chat-view';
 import type { ViewId } from '@/lib/types';
 
 const VIEWS: Record<ViewId, React.ComponentType> = {
-  generate: GenerateView,
-  editor: EditorView,
-  gallery: GalleryView,
-  history: HistoryView,
+  generate:    GenerateView,
+  editor:      EditorView,
+  gallery:     GalleryView,
+  history:     HistoryView,
   collections: CollectionsView,
-  workflows: WorkflowsView,
-  models: ModelsView,
-  api: ApiView,
-  chat: ChatView,
-  settings: SettingsView,
-  admin: AdminView,
+  api:         ApiView,
+  settings:    SettingsView,
+  admin:       AdminView,
 };
 
 export function ViewRouter() {
