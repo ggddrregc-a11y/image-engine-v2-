@@ -106,9 +106,10 @@ export function Sidebar({
           const active = activeView === item.id;
           const Icon = item.icon;
           return (
-            <button
+            <motion.button
               key={item.id}
               onClick={() => setActiveView(item.id)}
+              whileTap={{ scale: 0.97 }}
               className={cn(
                 'group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 active
@@ -154,7 +155,7 @@ export function Sidebar({
                   {item.badge}
                 </span>
               )}
-            </button>
+            </motion.button>
           );
         })}
       </nav>

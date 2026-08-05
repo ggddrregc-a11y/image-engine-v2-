@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Wand2, Save, Check, Loader2, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -58,7 +59,12 @@ export function AdminImageEditorPage() {
 
   return (
     <div className="space-y-5">
-      <AdminCard className="p-5">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        <AdminCard className="p-5">
         <div className="mb-4 flex items-center gap-2">
           <Wand2 className="h-5 w-5 text-primary" />
           <h3 className="font-display text-base font-bold">Image Editor Feature</h3>
@@ -92,10 +98,16 @@ export function AdminImageEditorPage() {
             </p>
           </div>
         </div>
-      </AdminCard>
+        </AdminCard>
+      </motion.div>
 
       {/* Save bar */}
-      <AdminCard className="flex items-center justify-between p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
+      >
+        <AdminCard className="flex items-center justify-between p-4">
         <p className="text-sm text-muted-foreground">
           {saved ? (
             <span className="flex items-center gap-1.5 text-success">
@@ -116,6 +128,7 @@ export function AdminImageEditorPage() {
           </AdminButton>
         </div>
       </AdminCard>
+      </motion.div>
     </div>
   );
 }
