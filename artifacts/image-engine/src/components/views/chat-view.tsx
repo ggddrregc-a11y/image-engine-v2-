@@ -4,44 +4,36 @@ import {
   MessageSquare,
   Send,
   RotateCcw,
+  Copy,
+  Check,
+  Bot,
+  User,
   Sparkles,
   Code2,
   Zap,
   Globe,
+  ChevronDown,
+  ThumbsUp,
+  ThumbsDown,
+  Share,
+  Download,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-
-/* ── Custom PNG icon component ──────────────────────────────────── */
-function Icon({
-  src,
-  size = 16,
-  className,
-  invert = true,
-}: {
-  src: string;
-  size?: number;
-  className?: string;
-  invert?: boolean;
-}) {
-  return (
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      className={cn('shrink-0 select-none', invert && 'invert opacity-70', className)}
-      draggable={false}
-    />
-  );
-}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+}
+
+interface ChatProviderOption {
+  id: string;
+  name: string;
+  model_name: string;
+  is_default?: boolean;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -62,9 +54,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
           className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
-          {copied
-            ? <Icon src="/icons/checked.png" size={12} />
-            : <Icon src="/icons/copy.png" size={12} />}
+          {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -143,8 +133,8 @@ function MessageBubble({
         isUser ? 'bg-primary ring-primary/20 text-black' : 'bg-card ring-border text-muted-foreground',
       )}>
         {isUser
-          ? <Icon src="/icons/user.png" size={14} invert={false} className="opacity-80" />
-          : <Icon src="/icons/bot.png" size={14} invert={false} className="opacity-80" />
+          ? <User className="h-3.5 w-3.5" />
+          : <img src="/icons/bot.png" alt="bot" width={14} height={14} className="opacity-70" />
         }
       </div>
 
@@ -170,18 +160,70 @@ function MessageBubble({
             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <button onClick={() => onCopy(msg.id, msg.content)} className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Copy">
-            {copiedId === msg.id
-              ? <Icon src="/icons/checked.png" size={12} />
-              : <Icon src="/icons/copy.png" size={12} />}
+            {copiedId === msg.id ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
           </button>
           {!isUser && (<>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="Like"><Icon src="/icons/like.png" size={12} /></button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="Dislike"><Icon src="/icons/dont-like.png" size={12} /></button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-secondary" title="History"><Icon src="/icons/history.png" size={12} /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Like"><ThumbsUp className="h-3 w-3" /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Dislike"><ThumbsDown className="h-3 w-3" /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Share"><Share className="h-3 w-3" /></button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:bg-secondary hover:text-foreground" title="Save"><Download className="h-3 w-3" /></button>
           </>)}
         </div>
       </div>
     </motion.div>
+  );
+}
+
+/* ── Model Selector ─────────────────────────────────────────────── */
+function ModelSelector({
+  providers,
+  selectedId,
+  onSelect,
+}: {
+  providers: ChatProviderOption[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = providers.find(p => p.id === selectedId) ?? providers[0];
+
+  if (providers.length <= 1) return null;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-foreground"
+      >
+        <span className="max-w-[120px] truncate">{selected?.name ?? 'Select model'}</span>
+        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-xl border border-border bg-card shadow-lg"
+          >
+            {providers.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { onSelect(p.id); setOpen(false); }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <div>
+                  <p className="font-medium text-foreground">{p.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">{p.model_name}</p>
+                </div>
+                {p.id === selectedId && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -193,8 +235,24 @@ export function ChatView() {
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [latestId, setLatestId] = useState<string | null>(null);
+  const [providers, setProviders] = useState<ChatProviderOption[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('viscodev');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch available providers
+  useEffect(() => {
+    fetch('/api/chat/providers')
+      .then(r => r.json())
+      .then((data: { ok: boolean; providers?: ChatProviderOption[] }) => {
+        if (data.ok && data.providers && data.providers.length > 0) {
+          setProviders(data.providers);
+          const def = data.providers.find(p => p.is_default) ?? data.providers[0];
+          setSelectedProviderId(def.id);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -220,7 +278,7 @@ export function ChatView() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, providerId: selectedProviderId }),
       });
       const data = await res.json() as { ok: boolean; reply?: string; error?: string };
 
@@ -239,7 +297,7 @@ export function ChatView() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, toast]);
+  }, [isLoading, toast, selectedProviderId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -255,22 +313,28 @@ export function ChatView() {
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
-      {/* Header */}
       <PageContainer>
         <PageHeader
           title="AI Chat"
-          description="تحدث مع GPT-4o Mini"
+          description="تحدث مع الذكاء الاصطناعي"
           icon={MessageSquare}
           actions={
-            messages.length > 0 ? (
-              <button
-                onClick={handleClear}
-                className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
-              >
-                <Icon src="/icons/plus.png" size={12} />
-                محادثة جديدة
-              </button>
-            ) : undefined
+            <div className="flex items-center gap-2">
+              <ModelSelector
+                providers={providers}
+                selectedId={selectedProviderId}
+                onSelect={setSelectedProviderId}
+              />
+              {messages.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  محادثة جديدة
+                </button>
+              )}
+            </div>
           }
         />
 
@@ -285,20 +349,20 @@ export function ChatView() {
                 transition={{ duration: 0.3 }}
                 className="flex h-full flex-col items-center justify-center gap-8 py-8"
               >
-                {/* Avatar */}
+                {/* Avatar with bot icon + checked */}
                 <div className="relative">
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-border bg-card shadow-lg">
-                    <Icon src="/icons/bot.png" size={40} invert={false} className="opacity-80" />
+                    <img src="/icons/bot.png" alt="AI" width={40} height={40} className="opacity-80" />
                   </div>
                   <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary">
-                    <Icon src="/icons/checked.png" size={12} invert={false} className="brightness-0" />
+                    <img src="/icons/checked.png" alt="online" width={12} height={12} className="brightness-0" />
                   </div>
                 </div>
 
                 <div className="text-center space-y-2">
                   <h2 className="text-xl font-bold tracking-tight">مرحباً! كيف يمكنني مساعدتك؟</h2>
                   <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-                    مدعوم بـ GPT-4o Mini — اسألني أي شيء
+                    اسألني أي شيء، أنا هنا للمساعدة
                   </p>
                 </div>
 
@@ -346,7 +410,7 @@ export function ChatView() {
                   className="flex items-end gap-3"
                 >
                   <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card ring-2 ring-border">
-                    <Icon src="/icons/bot.png" size={14} invert={false} className="opacity-70" />
+                    <img src="/icons/bot.png" alt="bot" width={14} height={14} className="opacity-70" />
                   </div>
                   <div className="rounded-2xl rounded-bl-sm border border-border/80 bg-card px-5 py-3.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
@@ -379,10 +443,6 @@ export function ChatView() {
                 className="flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 disabled:opacity-50"
                 style={{ maxHeight: 180 }}
               />
-            <div className="flex items-end gap-2">
-              <button className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 transition-colors hover:border-primary/30 hover:bg-secondary" title="Attach">
-                <Icon src="/icons/attach.png" size={16} />
-              </button>
               <motion.button
                 whileTap={{ scale: 0.93 }}
                 onClick={() => sendMessage(input)}
@@ -391,15 +451,14 @@ export function ChatView() {
                   'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
                   input.trim() && !isLoading
                     ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
-                    : 'cursor-not-allowed bg-secondary opacity-50',
+                    : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
                 )}
               >
-                <Icon src="/icons/mic.png" size={16} invert={false} className={cn(input.trim() && !isLoading ? 'brightness-0' : 'opacity-30')} />
+                <Send className="h-4 w-4" />
               </motion.button>
             </div>
-            </div>
             <p className="mt-2 text-center text-[10px] text-muted-foreground/35">
-              Powered by GPT-4o Mini · viscodev.x10.mx
+              Powered by AI · viscodev.x10.mx
             </p>
           </div>
         </div>
