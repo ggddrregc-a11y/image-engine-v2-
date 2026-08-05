@@ -7,6 +7,7 @@ export type ViewId =
   | 'workflows'
   | 'models'
   | 'api'
+  | 'chat'
   | 'settings'
   | 'admin';
 

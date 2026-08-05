@@ -11,6 +11,7 @@ import { ModelsView } from './models-view';
 import { ApiView } from './api-view';
 import { SettingsView } from './settings-view';
 import { AdminView } from './admin/admin-view';
+import { ChatView } from './chat-view';
 import type { ViewId } from '@/lib/types';
 
 const VIEWS: Record<ViewId, React.ComponentType> = {
@@ -22,6 +23,7 @@ const VIEWS: Record<ViewId, React.ComponentType> = {
   workflows: WorkflowsView,
   models: ModelsView,
   api: ApiView,
+  chat: ChatView,
   settings: SettingsView,
   admin: AdminView,
 };
