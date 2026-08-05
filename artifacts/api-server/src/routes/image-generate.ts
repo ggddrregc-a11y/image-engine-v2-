@@ -305,13 +305,13 @@ router.post("/image/generate", async (req, res) => {
     return res.status(400).json({ ok: false, error: "prompt is required" });
   }
 
-  // Resolve provider — from request body or fetch from Supabase by id
+  // Resolve provider — always fetch from Supabase if provider_id present (to get api_key securely)
   let providerType = body.provider_type;
   let baseUrl      = body.base_url ?? "";
   let apiKey       = body.api_key  ?? "";
   let model        = body.model    ?? "";
 
-  if (body.provider_id && (!providerType || !model)) {
+  if (body.provider_id) {
     const provider = await getProvider(body.provider_id);
     if (provider) {
       providerType = provider.provider_type;
