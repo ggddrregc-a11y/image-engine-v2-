@@ -30,7 +30,6 @@ import { patchWorkflow } from '@/lib/workflow-utils';
 import {
   PROMPT_TEMPLATES,
   FAVORITE_PROMPTS,
-  SAMPLE_IMAGES,
   SAMPLERS,
   ASPECT_RATIOS,
   MODELS,
@@ -71,7 +70,8 @@ export function GenerateView() {
   const [showAdvanced, setShowAdvanced] = useState(true);
   const [copied, setCopied] = useState(false);
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
-  const [recentResults, setRecentResults] = useState(SAMPLE_IMAGES.slice(0, 4));
+  const [recentResults, setRecentResults] = useState<{ id: string; url: string; prompt: string }[]>([]);
+  const [activeRecentIdx, setActiveRecentIdx] = useState(0);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -95,6 +95,27 @@ export function GenerateView() {
     };
     fetchWorkflows();
   }, [setSelectedModel]);
+
+  // Fetch recent images from gallery
+  useEffect(() => {
+    supabase
+      .from('stored_images')
+      .select('id, url, prompt')
+      .order('created_at', { ascending: false })
+      .limit(12)
+      .then(({ data }) => {
+        if (data && data.length > 0) setRecentResults(data);
+      });
+  }, []);
+
+  // Auto-rotate recent images slideshow
+  useEffect(() => {
+    if (recentResults.length < 2) return;
+    const interval = setInterval(() => {
+      setActiveRecentIdx((prev) => (prev + 1) % recentResults.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [recentResults]);
 
   // Keep job in running state while waiting — no fake progress simulation
   useEffect(() => {
@@ -812,26 +833,67 @@ export function GenerateView() {
           </div>
 
           {/* Recent generations */}
-          {recentResults.length > 1 && (
+          {recentResults.length > 0 && (
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Recent
               </h3>
               <div className="grid grid-cols-3 gap-2">
-                {recentResults.slice(1, 4).map((img) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setRecentResults((prev) => [img, ...prev.filter((i) => i.id !== img.id)])}
-                    className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-secondary transition-all hover:border-primary/30"
-                  >
-                    <img
-                      src={img.url}
-                      alt={img.prompt}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  </button>
-                ))}
+                {recentResults.slice(0, 9).map((img, i) => {
+                  const isActive = i === activeRecentIdx % Math.min(recentResults.length, 9);
+                  return (
+                    <button
+                      key={img.id}
+                      onClick={() => {
+                        setActiveRecentIdx(i);
+                        setGeneratedImage(img.url);
+                        setDownloadUrl(img.url);
+                      }}
+                      className={cn(
+                        'group relative aspect-square overflow-hidden rounded-xl border bg-secondary transition-all hover:border-primary/30',
+                        isActive ? 'border-primary/50 ring-1 ring-primary/30' : 'border-border',
+                      )}
+                    >
+                      <AnimatePresence mode="wait">
+                        <motion.img
+                          key={img.url}
+                          initial={{ opacity: 0, scale: 1.05 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.4 }}
+                          src={img.url}
+                          alt={img.prompt}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </AnimatePresence>
+                      {isActive && (
+                        <motion.div
+                          layoutId="recent-active"
+                          className="absolute inset-0 rounded-xl ring-2 ring-primary/40"
+                          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+              {/* Slideshow dots */}
+              {recentResults.length > 1 && (
+                <div className="mt-2 flex justify-center gap-1">
+                  {recentResults.slice(0, 9).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveRecentIdx(i)}
+                      className={cn(
+                        'h-1 rounded-full transition-all',
+                        i === activeRecentIdx % Math.min(recentResults.length, 9)
+                          ? 'w-4 bg-primary'
+                          : 'w-1 bg-border hover:bg-muted-foreground',
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
