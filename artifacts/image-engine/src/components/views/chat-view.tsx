@@ -187,40 +187,69 @@ function ModelSelector({
   const [open, setOpen] = useState(false);
   const selected = providers.find(p => p.id === selectedId) ?? providers[0];
 
-  if (providers.length <= 1) return null;
-
   return (
     <div className="relative">
+      {/* Trigger button */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-foreground"
+        className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
       >
-        <span className="max-w-[120px] truncate">{selected?.name ?? 'Select model'}</span>
-        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15">
+          <img src="/icons/bot.png" alt="" width={10} height={10} className="opacity-70" />
+        </div>
+        <span className="max-w-[140px] truncate">{selected?.name ?? 'اختر نموذج'}</span>
+        <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
       </button>
+
+      {/* Dropdown */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-xl border border-border bg-card shadow-lg"
-          >
-            {providers.map(p => (
-              <button
-                key={p.id}
-                onClick={() => { onSelect(p.id); setOpen(false); }}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-secondary"
-              >
-                <div>
-                  <p className="font-medium text-foreground">{p.name}</p>
-                  <p className="text-[10px] text-muted-foreground font-mono">{p.model_name}</p>
-                </div>
-                {p.id === selectedId && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-              </button>
-            ))}
-          </motion.div>
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="absolute bottom-full left-0 z-50 mb-2 w-72 overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+            >
+              <div className="border-b border-border/50 px-4 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">النماذج المتاحة</p>
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
+                {providers.map(p => {
+                  const isActive = p.id === selectedId;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => { onSelect(p.id); setOpen(false); }}
+                      className={cn(
+                        'group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
+                        isActive ? 'bg-primary/10' : 'hover:bg-secondary',
+                      )}
+                    >
+                      <div className={cn(
+                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border',
+                        isActive ? 'border-primary/30 bg-primary/10' : 'border-border bg-secondary',
+                      )}>
+                        <img src="/icons/bot.png" alt="" width={14} height={14} className={cn('transition-opacity', isActive ? 'opacity-80' : 'opacity-40 group-hover:opacity-60')} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-sm font-medium leading-tight', isActive ? 'text-primary' : 'text-foreground')}>
+                          {p.name}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground truncate">{p.model_name}</p>
+                      </div>
+                      {isActive && (
+                        <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
@@ -320,11 +349,6 @@ export function ChatView() {
           icon={MessageSquare}
           actions={
             <div className="flex items-center gap-2">
-              <ModelSelector
-                providers={providers}
-                selectedId={selectedProviderId}
-                onSelect={setSelectedProviderId}
-              />
               {messages.length > 0 && (
                 <button
                   onClick={handleClear}
@@ -432,33 +456,47 @@ export function ChatView() {
           {/* Input */}
           <div className="mt-3 shrink-0">
             <div className={cn(
-              'flex items-end gap-3 rounded-2xl border bg-card/80 px-4 py-3 shadow-sm transition-all duration-200',
+              'rounded-2xl border bg-card/80 shadow-sm transition-all duration-200',
               input ? 'border-primary/40' : 'border-border hover:border-border/80',
             )}>
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="اكتب رسالتك هنا..."
-                rows={1}
-                disabled={isLoading}
-                className="flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 disabled:opacity-50"
-                style={{ maxHeight: 180 }}
-              />
-              <motion.button
-                whileTap={{ scale: 0.93 }}
-                onClick={() => sendMessage(input)}
-                disabled={!input.trim() || isLoading}
-                className={cn(
-                  'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-                  input.trim() && !isLoading
-                    ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
-                    : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
-                )}
-              >
-                <Send className="h-4 w-4" />
-              </motion.button>
+              {/* Textarea */}
+              <div className="flex items-end gap-3 px-4 pt-3 pb-2">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="اكتب رسالتك هنا..."
+                  rows={1}
+                  disabled={isLoading}
+                  className="flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 disabled:opacity-50"
+                  style={{ maxHeight: 180 }}
+                />
+                <motion.button
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || isLoading}
+                  className={cn(
+                    'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+                    input.trim() && !isLoading
+                      ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
+                      : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
+                  )}
+                >
+                  <Send className="h-4 w-4" />
+                </motion.button>
+              </div>
+
+              {/* Model selector bar */}
+              {providers.length > 0 && (
+                <div className="border-t border-border/50 px-3 py-2">
+                  <ModelSelector
+                    providers={providers}
+                    selectedId={selectedProviderId}
+                    onSelect={setSelectedProviderId}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
