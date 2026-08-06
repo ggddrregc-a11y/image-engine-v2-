@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
+  Server,
+  Workflow,
+  Boxes,
   FileText,
   SlidersHorizontal,
   ListOrdered,
@@ -15,10 +18,14 @@ import {
   Zap,
   LifeBuoy,
   Megaphone,
+  MessageSquare,
   Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
+import { AdminProvidersPage } from './pages/providers-page';
+import { AdminComfyUIPage } from './pages/comfyui-page';
+import { AdminModelsPage } from './pages/models-page';
 import { AdminTemplatesPage } from './pages/templates-page';
 import { AdminGenerationSettingsPage } from './pages/gen-settings-page';
 import { AdminQueuePage } from './pages/queue-page';
@@ -28,24 +35,30 @@ import { AdminLogsPage } from './pages/logs-page';
 import { AdminLoginPage } from './admin-login-page';
 import { useAdminAuth } from '@/components/providers/admin-auth-provider';
 import { useApp } from '@/components/providers/app-provider';
+
 import { AdminImageEditorPage } from './pages/image-editor-page';
 import { AdminCreditsPage } from './pages/credits-page';
 import { AdminSupportPage } from './pages/support-page';
 import { AdminBannerPage } from './pages/banner-page';
+import { AdminChatProvidersPage } from './pages/chat-providers-page';
 import { AdminImageProvidersPage } from './pages/image-providers-page';
 
 export type AdminSubPage =
+  | 'providers'
+  | 'chat-providers'
   | 'image-providers'
-  | 'image-editor'
-  | 'credits'
-  | 'banner'
-  | 'support'
+  | 'comfyui'
+  | 'models'
   | 'templates'
   | 'gen-settings'
   | 'queue'
   | 'storage'
   | 'users'
-  | 'logs';
+  | 'logs'
+  | 'image-editor'
+  | 'credits'
+  | 'support'
+  | 'banner';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -53,24 +66,29 @@ const SUB_PAGES: {
   icon: React.ComponentType<{ className?: string }>;
   description: string;
 }[] = [
-  { id: 'image-providers', label: 'Image Providers',    icon: ImageIcon,         description: 'Manage image generation models & API keys' },
-  { id: 'image-editor',    label: 'Image Editor',       icon: Wand2,             description: 'Enable/disable AI image editing feature' },
-  { id: 'credits',         label: 'Credits',            icon: Zap,               description: 'Visitor credits & cost per operation' },
-  { id: 'banner',          label: 'Banner',             icon: Megaphone,         description: 'Announcement bar shown at the top of the site' },
-  { id: 'support',         label: 'Support Links',      icon: LifeBuoy,          description: 'Manage support & social links shown to users' },
-  { id: 'templates',       label: 'Prompt Templates',   icon: FileText,          description: 'Reusable prompt library' },
-  { id: 'gen-settings',    label: 'Generation Settings',icon: SlidersHorizontal, description: 'Global generation defaults' },
-  { id: 'queue',           label: 'Queue Manager',      icon: ListOrdered,       description: 'Real-time generation queue' },
-  { id: 'storage',         label: 'Storage',            icon: HardDrive,         description: 'Generated image library' },
-  { id: 'users',           label: 'User Management',    icon: Users,             description: 'Roles and permissions' },
-  { id: 'logs',            label: 'System Logs',        icon: ScrollText,        description: 'API, generation, and error logs' },
+  { id: 'providers',       label: 'AI Providers',    icon: Server,        description: 'Manage AI generation backends' },
+  { id: 'chat-providers',  label: 'Chat Providers',  icon: MessageSquare, description: 'Manage AI chat models & API keys' },
+  { id: 'image-providers', label: 'Image Providers', icon: ImageIcon,     description: 'Manage image generation models & API keys' },
+  { id: 'comfyui', label: 'ComfyUI', icon: Workflow, description: 'ComfyUI server & workflow configuration' },
+  { id: 'image-editor', label: 'Image Editor', icon: Wand2, description: 'Enable/disable AI image editing feature' },
+  { id: 'credits', label: 'Credits', icon: Zap, description: 'Visitor credits & cost per operation' },
+  { id: 'banner', label: 'Banner', icon: Megaphone, description: 'Announcement bar shown at the top of the site' },
+  { id: 'support', label: 'Support Links', icon: LifeBuoy, description: 'Manage support & social links shown to users' },
+  { id: 'models', label: 'Models', icon: Boxes, description: 'Model definitions and defaults' },
+  { id: 'templates', label: 'Prompt Templates', icon: FileText, description: 'Reusable prompt library' },
+  { id: 'gen-settings', label: 'Generation Settings', icon: SlidersHorizontal, description: 'Global generation defaults' },
+  { id: 'queue', label: 'Queue Manager', icon: ListOrdered, description: 'Real-time generation queue' },
+  { id: 'storage', label: 'Storage', icon: HardDrive, description: 'Generated image library' },
+  { id: 'users', label: 'User Management', icon: Users, description: 'Roles and permissions' },
+  { id: 'logs', label: 'System Logs', icon: ScrollText, description: 'API, generation, and error logs' },
 ];
 
 export function AdminView() {
   const { isAuthenticated, username, logout } = useAdminAuth();
   const { setActiveView } = useApp();
-  const [subPage, setSubPage] = useState<AdminSubPage>('image-providers');
+  const [subPage, setSubPage] = useState<AdminSubPage>('providers');
 
+  // ── Protected route: render login if not authenticated ──
   if (!isAuthenticated) {
     return <AdminLoginPage />;
   }
@@ -97,10 +115,15 @@ export function AdminView() {
         <div className="flex items-center gap-2">
           <span className="hidden items-center gap-2 rounded-xl border border-border bg-card/50 px-3 py-2 sm:flex">
             <Shield className="h-4 w-4 text-primary" />
-            <span className="text-xs font-medium">{username ?? 'admin'}</span>
+            <span className="text-xs font-medium">
+              {username ?? 'admin'}
+            </span>
           </span>
           <button
-            onClick={() => { logout(); setActiveView('generate'); }}
+            onClick={() => {
+              logout();
+              setActiveView('generate');
+            }}
             className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -148,17 +171,21 @@ export function AdminView() {
       <div className="mt-6">
         <AnimatePresence mode="wait">
           <AdminPageContainer key={subPage}>
+            {subPage === 'providers' && <AdminProvidersPage />}
+            {subPage === 'chat-providers' && <AdminChatProvidersPage />}
             {subPage === 'image-providers' && <AdminImageProvidersPage />}
-            {subPage === 'image-editor'    && <AdminImageEditorPage />}
-            {subPage === 'credits'         && <AdminCreditsPage />}
-            {subPage === 'banner'          && <AdminBannerPage />}
-            {subPage === 'support'         && <AdminSupportPage />}
-            {subPage === 'templates'       && <AdminTemplatesPage />}
-            {subPage === 'gen-settings'    && <AdminGenerationSettingsPage />}
-            {subPage === 'queue'           && <AdminQueuePage />}
-            {subPage === 'storage'         && <AdminStoragePage />}
-            {subPage === 'users'           && <AdminUsersPage />}
-            {subPage === 'logs'            && <AdminLogsPage />}
+            {subPage === 'comfyui' && <AdminComfyUIPage />}
+            {subPage === 'models' && <AdminModelsPage />}
+            {subPage === 'templates' && <AdminTemplatesPage />}
+            {subPage === 'gen-settings' && <AdminGenerationSettingsPage />}
+            {subPage === 'queue' && <AdminQueuePage />}
+            {subPage === 'storage' && <AdminStoragePage />}
+            {subPage === 'users' && <AdminUsersPage />}
+            {subPage === 'logs' && <AdminLogsPage />}
+            {subPage === 'image-editor' && <AdminImageEditorPage />}
+            {subPage === 'credits' && <AdminCreditsPage />}
+            {subPage === 'banner' && <AdminBannerPage />}
+            {subPage === 'support' && <AdminSupportPage />}
           </AdminPageContainer>
         </AnimatePresence>
       </div>

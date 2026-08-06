@@ -17,7 +17,6 @@ import {
   ThumbsDown,
   Share,
   Download,
-  Paperclip,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
@@ -278,7 +277,6 @@ export function ChatView() {
   const [selectedProviderId, setSelectedProviderId] = useState<string>('viscodev');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch available providers
   useEffect(() => {
@@ -408,6 +406,9 @@ export function ChatView() {
 
                 <div className="text-center space-y-1">
                   <h2 className="text-xl font-bold tracking-tight">مرحباً! كيف يمكنني مساعدتك؟</h2>
+                  <p className="text-xs font-mono text-primary/70">
+                    {providers.find(p => p.id === selectedProviderId)?.model_name ?? 'gpt-4o-mini'}
+                  </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     اسألني أي شيء، أنا هنا للمساعدة
                   </p>
@@ -481,16 +482,6 @@ export function ChatView() {
             )}>
               {/* Textarea */}
               <div className="flex items-end gap-3 px-4 pt-3 pb-2">
-                <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" className="hidden" />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
-                  className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground transition-all hover:border-primary/30 hover:bg-secondary hover:text-foreground disabled:opacity-40"
-                  title="إرفاق ملف أو صورة"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </button>
                 <textarea
                   ref={textareaRef}
                   value={input}
