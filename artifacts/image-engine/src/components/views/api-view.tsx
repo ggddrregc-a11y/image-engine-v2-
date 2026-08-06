@@ -186,9 +186,9 @@ export function ApiView() {
             </div>
           ) : (
             <div className="space-y-4">
-              <StatRow label="Images Generated" value={stats.totalImages} icon="🖼️" />
-              <StatRow label="Generation Jobs"  value={stats.totalJobs}   icon="⚡" />
-              <StatRow label="System Logs"      value={stats.totalLogs}   icon="📋" />
+              <UsageBar label="Images Generated" used={stats.totalImages} total={Math.max(stats.totalImages, 100)} />
+              <UsageBar label="Generation Jobs"  used={stats.totalJobs}   total={Math.max(stats.totalJobs, 100)} />
+              <UsageBar label="System Logs"      used={stats.totalLogs}   total={Math.max(stats.totalLogs, 100)} />
             </div>
           )}
         </motion.div>
@@ -260,20 +260,27 @@ export function ApiView() {
   );
 }
 
-function StatRow({ label, value, icon }: { label: string; value: number; icon: string }) {
+function UsageBar({ label, used, total }: { label: string; used: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.min(100, (used / total) * 100);
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-secondary/30 px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="text-base">{icon}</span>
-        <span className="text-sm font-medium">{label}</span>
+    <div>
+      <div className="mb-1.5 flex items-center justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <span className="text-muted-foreground">
+          {used.toLocaleString()} / {total.toLocaleString()}
+        </span>
       </div>
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="font-mono text-sm font-semibold tabular-nums text-primary"
-      >
-        {value.toLocaleString()}
-      </motion.span>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className={cn(
+            'h-full rounded-full',
+            pct > 80 ? 'bg-destructive' : 'gradient-amber',
+          )}
+        />
+      </div>
     </div>
   );
 }
