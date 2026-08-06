@@ -11,12 +11,15 @@ import { SettingsView } from './settings-view';
 import { AdminView } from './admin/admin-view';
 import type { ViewId } from '@/lib/types';
 
+import { ChatView } from './chat-view';
+
 const VIEWS: Record<ViewId, React.ComponentType> = {
   generate:    GenerateView,
   editor:      EditorView,
   gallery:     GalleryView,
   history:     HistoryView,
   collections: CollectionsView,
+  chat:        ChatView,
   api:         ApiView,
   settings:    SettingsView,
   admin:       AdminView,
