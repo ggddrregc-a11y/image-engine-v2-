@@ -18,8 +18,6 @@ import {
   Share,
   Download,
   Paperclip,
-  X,
-  FileText,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
@@ -30,7 +28,6 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  attachments?: { name: string; type: string; dataUrl: string }[];
 }
 
 interface ChatProviderOption {
@@ -150,26 +147,6 @@ function MessageBubble({
             ? 'rounded-br-sm bg-primary/15 text-foreground ring-1 ring-primary/20'
             : 'rounded-bl-sm border border-border/80 bg-card text-foreground',
         )}>
-          {/* Attachments */}
-          {msg.attachments && msg.attachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {msg.attachments.map((att, i) => (
-                att.type.startsWith('image/') ? (
-                  <img
-                    key={i}
-                    src={att.dataUrl}
-                    alt={att.name}
-                    className="max-h-48 max-w-[240px] rounded-xl object-cover border border-border/50"
-                  />
-                ) : (
-                  <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs">
-                    <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="max-w-[160px] truncate">{att.name}</span>
-                  </div>
-                )
-              ))}
-            </div>
-          )}
           {isUser
             ? <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
             : isLatest
@@ -302,7 +279,6 @@ export function ChatView() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
 
   // Fetch available providers
   useEffect(() => {
@@ -336,39 +312,13 @@ export function ChatView() {
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
 
-  const handleFileSelect = useCallback((files: FileList | null) => {
-    if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setAttachments(prev => [...prev, {
-          name: file.name,
-          type: file.type,
-          dataUrl: e.target?.result as string,
-        }]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
-  const removeAttachment = useCallback((index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if ((!trimmed && attachments.length === 0) || isLoading) return;
+    if (!trimmed || isLoading) return;
 
-    const userMsg: Message = {
-      id: `u-${Date.now()}`,
-      role: 'user',
-      content: trimmed,
-      timestamp: new Date(),
-      attachments: attachments.length > 0 ? [...attachments] : undefined,
-    };
+    const userMsg: Message = { id: `u-${Date.now()}`, role: 'user', content: trimmed, timestamp: new Date() };
     setMessages(p => [...p, userMsg]);
     setInput('');
-    setAttachments([]);
     setIsLoading(true);
 
     try {
@@ -394,7 +344,7 @@ export function ChatView() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, toast, selectedProviderId, attachments]);
+  }, [isLoading, toast, selectedProviderId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -531,16 +481,7 @@ export function ChatView() {
             )}>
               {/* Textarea */}
               <div className="flex items-end gap-3 px-4 pt-3 pb-2">
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.txt,.doc,.docx"
-                  className="hidden"
-                  onChange={(e) => { handleFileSelect(e.target.files); e.target.value = ''; }}
-                />
-                {/* Paperclip button */}
+                <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" className="hidden" />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -564,10 +505,10 @@ export function ChatView() {
                 <motion.button
                   whileTap={{ scale: 0.93 }}
                   onClick={() => sendMessage(input)}
-                  disabled={(!input.trim() && attachments.length === 0) || isLoading}
+                  disabled={!input.trim() || isLoading}
                   className={cn(
                     'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-                    (input.trim() || attachments.length > 0) && !isLoading
+                    input.trim() && !isLoading
                       ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
                       : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
                   )}
@@ -575,37 +516,6 @@ export function ChatView() {
                   <Send className="h-4 w-4" />
                 </motion.button>
               </div>
-
-              {/* Attachments preview */}
-              <AnimatePresence>
-                {attachments.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-wrap gap-2 overflow-hidden border-t border-border/50 px-4 py-2"
-                  >
-                    {attachments.map((att, i) => (
-                      <div key={i} className="flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-2 py-1.5">
-                        {att.type.startsWith('image/') ? (
-                          <img src={att.dataUrl} alt={att.name} className="h-8 w-8 rounded-lg object-cover" />
-                        ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                        )}
-                        <span className="max-w-[100px] truncate text-[11px] text-muted-foreground">{att.name}</span>
-                        <button
-                          onClick={() => removeAttachment(i)}
-                          className="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Model selector bar */}
               {providers.length > 0 && (
