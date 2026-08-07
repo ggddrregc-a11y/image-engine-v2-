@@ -396,6 +396,13 @@
   .animate-slide-down { animation: slide-down 0.3s ease-out both; }
   .animate-scale-in   { animation: scale-in 0.3s ease-out both; }
 
+  /* ── Shimmer ── */
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+  .animate-shimmer { animation: shimmer 1.5s infinite; }
+
   /* staggered delay helpers */
   .delay-75  { animation-delay: 75ms; }
   .delay-150 { animation-delay: 150ms; }

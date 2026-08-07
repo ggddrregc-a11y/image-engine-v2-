@@ -64,8 +64,22 @@ function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming?
     <div className="mb-2 w-full max-w-[85%] sm:max-w-[78%]">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        className={cn(
+          'relative flex items-center gap-2 overflow-hidden rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary hover:text-foreground',
+          isStreaming
+            ? 'border-primary/30 bg-primary/5 text-primary'
+            : 'border-border/60 bg-secondary/40 text-muted-foreground',
+        )}
       >
+        {/* Shimmer overlay لما بيفكر */}
+        {isStreaming && (
+          <span
+            className="pointer-events-none absolute inset-0 animate-shimmer"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, hsl(var(--primary)/0.15) 50%, transparent 100%)',
+            }}
+          />
+        )}
         {/* Thinking animation */}
         {isStreaming ? (
           <span className="flex items-center gap-1">
@@ -73,9 +87,7 @@ function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming?
             <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
             <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
           </span>
-        ) : (
-          <span className="h-3 w-3 text-primary opacity-60">💭</span>
-        )}
+        ) : null}
         <span className="font-medium">{isStreaming ? 'Thinking...' : 'Thinking'}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
