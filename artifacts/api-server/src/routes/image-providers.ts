@@ -60,11 +60,10 @@ router.post("/image-providers/fetch-models", async (req, res) => {
   // Gemini — موديلات الصور المعروفة
   if (provider_type === "gemini") {
     const geminiModels: FetchedModel[] = [
-      { id: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash Exp (مجاني - موصى به)", supported: true, isFree: true },
-      { id: "gemini-2.0-flash-preview-image-generation", name: "Gemini 2.0 Flash Image Preview", supported: true, isFree: true },
-      { id: "gemini-3.1-flash-image-preview", name: "Gemini 3.1 Flash Image (rate limit ضيق)", supported: true, isFree: false },
+      { id: "gemini-2.5-flash-image", name: "Gemini 2.5 Flash Image / Nano Banana (مجاني)", supported: true, isFree: true },
+      { id: "gemini-3.1-flash-image-preview", name: "Gemini 3.1 Flash Image / Nano Banana 2", supported: true, isFree: false },
+      { id: "gemini-3-pro-image", name: "Gemini 3 Pro Image (مدفوع)", supported: true, isFree: false },
       { id: "imagen-3.0-generate-002", name: "Imagen 3.0 (يحتاج billing)", supported: true, isFree: false },
-      { id: "imagen-3.0-fast-generate-001", name: "Imagen 3.0 Fast (يحتاج billing)", supported: true, isFree: false },
     ];
     return res.json({ ok: true, models: geminiModels });
   }
@@ -197,7 +196,7 @@ router.post("/image-providers/generate", async (req, res) => {
     // ── Google Gemini Image ───────────────────────────────────────
     if (provider_type === "gemini") {
       if (!api_key) return res.status(400).json({ ok: false, error: "API Key required for Gemini" });
-      const modelName = model ?? "gemini-2.0-flash-exp";
+      const modelName = model ?? "gemini-2.5-flash-image";
 
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${api_key}`,
