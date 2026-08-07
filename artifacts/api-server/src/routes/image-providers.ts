@@ -198,14 +198,19 @@ router.post("/image-providers/generate", async (req, res) => {
       if (!api_key) return res.status(400).json({ ok: false, error: "API Key required for Gemini" });
       const modelName = model ?? "gemini-2.5-flash-image";
 
+      // الـ API الجديد بتاع Nano Banana يستخدم /v1beta/interactions
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${api_key}`,
+        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${api_key}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            model: modelName,
+            input: prompt,
+            response_format: {
+              type: "image",
+              aspect_ratio: w > h ? "16:9" : w < h ? "9:16" : "1:1",
+            },
           }),
         },
       );
@@ -213,7 +218,6 @@ router.post("/image-providers/generate", async (req, res) => {
       if (!geminiRes.ok) {
         const errText = await geminiRes.text();
         logger.error({ status: geminiRes.status, body: errText }, "[image-gen] Gemini error");
-        // رجّع الرسالة الكاملة من Google للـ client
         let errMsg = `Gemini HTTP ${geminiRes.status}`;
         try {
           const errJson = JSON.parse(errText);
@@ -226,20 +230,31 @@ router.post("/image-providers/generate", async (req, res) => {
       }
 
       const geminiData = await geminiRes.json() as {
-        candidates?: { content?: { parts?: { inlineData?: { mimeType: string; data: string } }[] } }[];
+        steps?: { type: string; content?: { type: string; data?: string; mimeType?: string }[] }[];
+        output_image?: { data: string; mimeType?: string };
       };
 
-      const imagePart = geminiData.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      if (!imagePart?.inlineData) {
-        // ممكن Gemini رجّع نص بدل صورة — نرجع تفاصيل
-        const textPart = geminiData.candidates?.[0]?.content?.parts?.find((p: Record<string, unknown>) => p["text"]);
-        const detail = textPart ? String((textPart as Record<string, unknown>)["text"]) : JSON.stringify(geminiData);
-        return res.status(502).json({ ok: false, error: `Gemini لم يرجع صورة. تفاصيل: ${detail.slice(0, 300)}` });
+      // جرّب output_image الأول (الأسهل)
+      if (geminiData.output_image?.data) {
+        const mime = geminiData.output_image.mimeType ?? "image/png";
+        const imageUrl = `data:${mime};base64,${geminiData.output_image.data}`;
+        return res.json({ ok: true, imageUrl });
       }
 
-      const { mimeType, data } = imagePart.inlineData;
-      const imageUrl = `data:${mimeType};base64,${data}`;
-      return res.json({ ok: true, imageUrl });
+      // fallback — ابحث في الـ steps
+      for (const step of geminiData.steps ?? []) {
+        if (step.type === "model_output") {
+          for (const block of step.content ?? []) {
+            if (block.type === "image" && block.data) {
+              const mime = block.mimeType ?? "image/png";
+              const imageUrl = `data:${mime};base64,${block.data}`;
+              return res.json({ ok: true, imageUrl });
+            }
+          }
+        }
+      }
+
+      return res.status(502).json({ ok: false, error: "Gemini لم يرجع صورة — تأكد من صلاحية الموديل" });
     }
 
     // ── OpenAI DALL·E ─────────────────────────────────────────────
