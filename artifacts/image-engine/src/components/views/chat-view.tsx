@@ -693,6 +693,9 @@ export function ChatView() {
           attachments: currentAttachments.length > 0
             ? currentAttachments.map(a => ({ data: a.data, mimeType: a.mimeType, name: a.name }))
             : undefined,
+          history: messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({ role: m.role, content: m.content })),
         }),
       });
       const data = await res.json() as { ok: boolean; reply?: string; error?: string };
