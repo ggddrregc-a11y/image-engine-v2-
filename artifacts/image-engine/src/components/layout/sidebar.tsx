@@ -19,8 +19,35 @@ import { cn } from '@/lib/utils';
 import { useApp } from '@/components/providers/app-provider';
 import { t } from '@/lib/i18n';
 import type { ViewId } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+
+function AdBanner300({ collapsed, activeView }: { collapsed: boolean; activeView: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (collapsed || activeView === 'admin') return;
+    if (!ref.current) return;
+    ref.current.innerHTML = '';
+
+    const s1 = document.createElement('script');
+    s1.innerHTML = `atOptions = {'key':'1d999c815155d29961fe491bca4e770a','format':'iframe','height':250,'width':300,'params':{}};`;
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.highperformanceformat.com/1d999c815155d29961fe491bca4e770a/invoke.js';
+    s2.async = true;
+
+    ref.current.appendChild(s1);
+    ref.current.appendChild(s2);
+  }, [collapsed, activeView]);
+
+  if (collapsed || activeView === 'admin') return null;
+
+  return (
+    <div className="px-3 pb-2">
+      <div ref={ref} className="flex min-h-[250px] items-center justify-center overflow-hidden rounded-xl border border-border/30" />
+    </div>
+  );
+}
 
 const NAV_ITEMS: {
   id: ViewId;
@@ -162,19 +189,8 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* إعلان 300x250 — مخفي لو collapsed أو في الأدمن */}
-      {!collapsed && activeView !== 'admin' && (
-        <div className="px-3 pb-2 overflow-hidden">
-          <div className="flex items-center justify-center rounded-xl overflow-hidden border border-border/30">
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `atOptions = {'key':'1d999c815155d29961fe491bca4e770a','format':'iframe','height':250,'width':300,'params':{}};`,
-              }}
-            />
-            <script src="https://www.highperformanceformat.com/1d999c815155d29961fe491bca4e770a/invoke.js" async />
-          </div>
-        </div>
-      )}
+      {/* إعلان 300x250 */}
+      <AdBanner300 collapsed={collapsed} activeView={activeView} />
 
       <div className="border-t border-border p-3">
         <button

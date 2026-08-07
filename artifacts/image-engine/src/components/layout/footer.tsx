@@ -1,17 +1,25 @@
 import { ShieldCheck, Lock } from 'lucide-react';
 import { useApp } from '@/components/providers/app-provider';
+import { useEffect, useRef } from 'react';
 
 function AdBanner728() {
-  return (
-    <div className="flex items-center justify-center py-2 overflow-hidden">
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `atOptions = {'key':'449140387cd4430b4584358a23c87848','format':'iframe','height':90,'width':728,'params':{}};`,
-        }}
-      />
-      <script src="https://www.highperformanceformat.com/449140387cd4430b4584358a23c87848/invoke.js" async />
-    </div>
-  );
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    ref.current.innerHTML = '';
+
+    const s1 = document.createElement('script');
+    s1.innerHTML = `atOptions = {'key':'449140387cd4430b4584358a23c87848','format':'iframe','height':90,'width':728,'params':{}};`;
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.highperformanceformat.com/449140387cd4430b4584358a23c87848/invoke.js';
+    s2.async = true;
+
+    ref.current.appendChild(s1);
+    ref.current.appendChild(s2);
+  }, []);
+
+  return <div ref={ref} className="flex items-center justify-center py-2 min-h-[90px]" />;
 }
 
 export function Footer() {
