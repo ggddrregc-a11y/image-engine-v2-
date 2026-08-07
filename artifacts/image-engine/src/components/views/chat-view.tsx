@@ -17,16 +17,30 @@ import {
   ThumbsDown,
   Share,
   Download,
+  Paperclip,
+  Camera,
+  X,
+  FileText,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+interface Attachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  data: string; // base64
+  previewUrl?: string; // للصور بس
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  attachments?: Attachment[];
 }
 
 interface ChatProviderOption {
@@ -157,6 +171,28 @@ function MessageBubble({
 
       {/* Bubble */}
       <div className={cn('flex w-full max-w-[85%] sm:max-w-[78%] flex-col gap-1 overflow-hidden', isUser ? 'items-end' : 'items-start')}>
+
+        {/* Attachments preview */}
+        {msg.attachments && msg.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-1">
+            {msg.attachments.map(att => (
+              att.previewUrl ? (
+                <img
+                  key={att.id}
+                  src={att.previewUrl}
+                  alt={att.name}
+                  className="max-h-48 max-w-[240px] rounded-xl border border-border object-cover shadow-sm"
+                />
+              ) : (
+                <div key={att.id} className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="truncate max-w-[160px]">{att.name}</span>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
         <div className={cn(
           'rounded-2xl px-4 py-3 shadow-sm',
           isUser
@@ -292,8 +328,11 @@ export function ChatView() {
   const [latestId, setLatestId] = useState<string | null>(null);
   const [providers, setProviders] = useState<ChatProviderOption[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>('viscodev');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch available providers
   useEffect(() => {
@@ -329,18 +368,33 @@ export function ChatView() {
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed && attachments.length === 0) return;
+    if (isLoading) return;
 
-    const userMsg: Message = { id: `u-${Date.now()}`, role: 'user', content: trimmed, timestamp: new Date() };
+    const currentAttachments = [...attachments];
+    const userMsg: Message = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: trimmed,
+      timestamp: new Date(),
+      attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
+    };
     setMessages(p => [...p, userMsg]);
     setInput('');
+    setAttachments([]);
     setIsLoading(true);
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, providerId: selectedProviderId }),
+        body: JSON.stringify({
+          message: trimmed,
+          providerId: selectedProviderId,
+          attachments: currentAttachments.length > 0
+            ? currentAttachments.map(a => ({ data: a.data, mimeType: a.mimeType, name: a.name }))
+            : undefined,
+        }),
       });
       const data = await res.json() as { ok: boolean; reply?: string; error?: string };
 
@@ -359,7 +413,30 @@ export function ChatView() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, toast, selectedProviderId]);
+  }, [isLoading, toast, selectedProviderId, attachments]);
+
+  // معالجة الملفات المختارة
+  const handleFiles = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        // result = "data:mimeType;base64,xxxx"
+        const base64 = result.split(',')[1];
+        const isImage = file.type.startsWith('image/');
+        const att: Attachment = {
+          id: `att-${Date.now()}-${Math.random()}`,
+          name: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          data: base64,
+          previewUrl: isImage ? result : undefined,
+        };
+        setAttachments(prev => [...prev, att]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -374,6 +451,7 @@ export function ChatView() {
   const handleClear = () => {
     setMessages([]);
     setInput('');
+    setAttachments([]);
     setLatestId(null);
     localStorage.removeItem(STORAGE_KEY);
   };
@@ -490,12 +568,81 @@ export function ChatView() {
 
           {/* Input */}
           <div className="mt-3 shrink-0">
+            {/* Hidden file inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.txt,.md,.js,.ts,.tsx,.jsx,.py,.json,.csv,.html,.css,.xml,.yaml,.yml,.doc,.docx"
+              className="hidden"
+              onChange={e => handleFiles(e.target.files)}
+              onClick={e => { (e.target as HTMLInputElement).value = ''; }}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={e => handleFiles(e.target.files)}
+              onClick={e => { (e.target as HTMLInputElement).value = ''; }}
+            />
+
             <div className={cn(
               'rounded-2xl border bg-card/80 shadow-sm transition-all duration-200',
-              input ? 'border-primary/40' : 'border-border hover:border-border/80',
+              (input || attachments.length > 0) ? 'border-primary/40' : 'border-border hover:border-border/80',
             )}>
+
+              {/* Attachments preview */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-4 pt-3">
+                  {attachments.map(att => (
+                    <div key={att.id} className="relative group/att">
+                      {att.previewUrl ? (
+                        <img
+                          src={att.previewUrl}
+                          alt={att.name}
+                          className="h-16 w-16 rounded-xl object-cover border border-border"
+                        />
+                      ) : (
+                        <div className="flex h-16 items-center gap-2 rounded-xl border border-border bg-secondary px-3 text-xs text-muted-foreground max-w-[140px]">
+                          <FileText className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="truncate">{att.name}</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
+                        className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white opacity-0 group-hover/att:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Textarea */}
-              <div className="flex items-end gap-3 px-4 pt-3 pb-2">
+              <div className="flex items-end gap-2 px-3 pt-3 pb-2">
+                {/* Attach buttons */}
+                <div className="flex items-center gap-1 mb-0.5">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+                    title="إرفاق ملف أو صورة"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+                    title="التقاط صورة بالكاميرا"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -510,10 +657,10 @@ export function ChatView() {
                 <motion.button
                   whileTap={{ scale: 0.93 }}
                   onClick={() => sendMessage(input)}
-                  disabled={!input.trim() || isLoading}
+                  disabled={(!input.trim() && attachments.length === 0) || isLoading}
                   className={cn(
                     'mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-                    input.trim() && !isLoading
+                    (input.trim() || attachments.length > 0) && !isLoading
                       ? 'gradient-amber text-black shadow-sm hover:glow-amber hover:scale-105'
                       : 'cursor-not-allowed bg-secondary text-muted-foreground opacity-50',
                   )}

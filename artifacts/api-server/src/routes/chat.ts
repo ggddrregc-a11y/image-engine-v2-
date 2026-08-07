@@ -42,21 +42,65 @@ async function getProvider(providerId?: string): Promise<ChatProvider | null> {
   } catch { return null; }
 }
 
-async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string, message: string): Promise<string> {
+async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string, message: string, attachments?: { data: string; mimeType: string; name: string }[]): Promise<string> {
+  // بناء الـ content — لو في attachments نبعتهم مع الرسالة
+  let content: unknown;
+  if (attachments && attachments.length > 0) {
+    const parts: unknown[] = [];
+    for (const att of attachments) {
+      if (att.mimeType.startsWith("image/")) {
+        parts.push({ type: "image_url", image_url: { url: `data:${att.mimeType};base64,${att.data}` } });
+      } else {
+        // ملفات نصية/برمجية/PDF — نبعت محتواها كنص
+        try {
+          const decoded = Buffer.from(att.data, "base64").toString("utf-8");
+          parts.push({ type: "text", text: `[ملف: ${att.name}]\n${decoded}` });
+        } catch {
+          parts.push({ type: "text", text: `[ملف: ${att.name} — لا يمكن قراءة محتواه]` });
+        }
+      }
+    }
+    if (message.trim()) parts.push({ type: "text", text: message });
+    content = parts;
+  } else {
+    content = message;
+  }
+
   const res = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages: [{ role: "user", content: message }], max_tokens: 2048 }),
+    body: JSON.stringify({ model, messages: [{ role: "user", content }], max_tokens: 4096 }),
   });
   if (!res.ok) { const err = await res.text().catch(() => `HTTP ${res.status}`); throw new Error(`API error ${res.status}: ${err}`); }
   const data = await res.json() as { choices?: { message?: { content?: string } }[] };
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-async function callGemini(apiKey: string, model: string, message: string): Promise<string> {
+async function callGemini(apiKey: string, model: string, message: string, attachments?: { data: string; mimeType: string; name: string }[]): Promise<string> {
+  const parts: unknown[] = [];
+
+  if (attachments && attachments.length > 0) {
+    for (const att of attachments) {
+      if (att.mimeType.startsWith("image/") || att.mimeType === "application/pdf") {
+        // Gemini يدعم الصور والـ PDF مباشرة كـ inlineData
+        parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
+      } else {
+        // ملفات نصية/برمجية — نبعت محتواها كنص
+        try {
+          const decoded = Buffer.from(att.data, "base64").toString("utf-8");
+          parts.push({ text: `[ملف: ${att.name}]\n${decoded}` });
+        } catch {
+          parts.push({ text: `[ملف: ${att.name} — لا يمكن قراءة محتواه]` });
+        }
+      }
+    }
+  }
+
+  if (message.trim()) parts.push({ text: message });
+
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] }) }
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts }] }) }
   );
   if (!res.ok) { const err = await res.text().catch(() => `HTTP ${res.status}`); throw new Error(`Gemini error ${res.status}: ${err}`); }
   const data = await res.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
@@ -201,41 +245,48 @@ router.get("/chat/providers", async (_req, res) => {
  * POST /api/chat
  */
 router.post("/chat", async (req, res) => {
-  const { message, providerId } = req.body as { message?: string; providerId?: string };
-  if (!message || !message.trim()) return res.status(400).json({ ok: false, error: "message is required" });
+  const { message, providerId, attachments } = req.body as {
+    message?: string;
+    providerId?: string;
+    attachments?: { data: string; mimeType: string; name: string }[];
+  };
+  if (!message?.trim() && (!attachments || attachments.length === 0)) {
+    return res.status(400).json({ ok: false, error: "message or attachment is required" });
+  }
+
+  const msg = message?.trim() ?? "";
 
   if (!providerId || providerId === "viscodev") {
-    try { return res.json({ ok: true, reply: await callViscodev(message.trim()) }); }
+    try { return res.json({ ok: true, reply: await callViscodev(msg) }); }
     catch (err) { return res.status(502).json({ ok: false, error: String(err) }); }
   }
 
   const provider = await getProvider(providerId);
   if (!provider || provider.base_url.includes("viscodev.x10.mx")) {
-    try { return res.json({ ok: true, reply: await callViscodev(message.trim()) }); }
+    try { return res.json({ ok: true, reply: await callViscodev(msg) }); }
     catch (err) { return res.status(502).json({ ok: false, error: String(err) }); }
   }
 
   try {
     let reply = "";
-    // viscodev proxy uses a special GET-based API
     if (provider.base_url.includes("viscodev.x10.mx")) {
-      const url = `${provider.base_url.replace(/\/$/, "")}?text=${encodeURIComponent(message.trim())}`;
+      const url = `${provider.base_url.replace(/\/$/, "")}?text=${encodeURIComponent(msg)}`;
       const r = await fetch(url, { method: "GET" });
       if (!r.ok) throw new Error(`Viscodev error ${r.status}`);
       const d = await r.json() as { success: boolean; text?: string; reply?: string };
       if (!d.success) throw new Error("Viscodev returned failure");
       reply = d.text ?? d.reply ?? "";
     } else if (provider.provider_type === "gemini") {
-      reply = await callGemini(provider.api_key, provider.model_name, message.trim());
+      reply = await callGemini(provider.api_key, provider.model_name, msg, attachments);
     } else {
-      reply = await callOpenAICompatible(provider.base_url, provider.api_key, provider.model_name, message.trim());
+      reply = await callOpenAICompatible(provider.base_url, provider.api_key, provider.model_name, msg, attachments);
     }
     req.log.info({ provider: provider.name, model: provider.model_name }, "[chat] reply received");
     return res.json({ ok: true, reply });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    req.log.error({ err: msg }, "[chat] provider request failed");
-    return res.status(502).json({ ok: false, error: `Chat API error: ${msg}` });
+    const msg2 = err instanceof Error ? err.message : String(err);
+    req.log.error({ err: msg2 }, "[chat] provider request failed");
+    return res.status(502).json({ ok: false, error: `Chat API error: ${msg2}` });
   }
 });
 
