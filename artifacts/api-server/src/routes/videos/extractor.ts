@@ -42,6 +42,33 @@ const RAPIDAPI_URL  = `https://${RAPIDAPI_HOST}/get_media`;
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
+/**
+ * يحل الروابط المختصرة (share/r/ أو fb.watch) للرابط الحقيقي
+ */
+async function resolveUrl(url: string): Promise<string> {
+  // لو مش رابط مختصر، رجّعه كما هو
+  const isShort = url.includes('/share/') || url.includes('fb.watch') || url.includes('fb.me');
+  if (!isShort) return url;
+
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    });
+    const finalUrl = res.url;
+    // استخراج story_fbid أو video_id من الـ URL المحلول
+    const storyMatch = finalUrl.match(/story_fbid=(\d+)/);
+    const idMatch = finalUrl.match(/[?&]id=(\d+)/);
+    if (storyMatch && idMatch) {
+      return `https://www.facebook.com/permalink.php?story_fbid=${storyMatch[1]}&id=${idMatch[1]}`;
+    }
+    return finalUrl.includes('facebook.com') ? finalUrl : url;
+  } catch {
+    return url;
+  }
+}
+
 function extractVideoId(url: string): string {
   // استخراج الـ ID من روابط فيسبوك المختلفة
   const patterns = [
@@ -123,6 +150,9 @@ function buildFormats(data: Record<string, unknown>): VideoFormat[] {
  */
 export async function extractSingleVideo(url: string): Promise<ExtractorResult> {
   try {
+    // حل الروابط المختصرة أولاً
+    const resolvedUrl = await resolveUrl(url);
+
     const res = await fetch(RAPIDAPI_URL, {
       method: "POST",
       headers: {
@@ -130,7 +160,7 @@ export async function extractSingleVideo(url: string): Promise<ExtractorResult> 
         "x-rapidapi-host": RAPIDAPI_HOST,
         "x-rapidapi-key": RAPIDAPI_KEY,
       },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url: resolvedUrl }),
     });
 
     if (!res.ok) {
@@ -150,13 +180,14 @@ export async function extractSingleVideo(url: string): Promise<ExtractorResult> 
     const duration = Number(data["duration"] ?? data["duration_ms"] ? Number(data["duration_ms"]) / 1000 : 0);
     const formats = buildFormats(data);
 
+    // استخدم الـ URL المحلول كـ post_url بدل الأصلي
     const video: ExtractedVideo = {
       fb_video_id: videoId,
       title,
       thumbnail_url: thumbnail,
       published_at: null,
       duration_seconds: Math.round(duration),
-      post_url: String(data["source_url"] ?? url),
+      post_url: String(data["source_url"] ?? resolvedUrl),
       download_formats: formats,
       raw_metadata: data,
     };
