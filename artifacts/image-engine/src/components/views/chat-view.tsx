@@ -139,7 +139,7 @@ function MessageBubble({
       </div>
 
       {/* Bubble */}
-      <div className={cn('flex max-w-[78%] flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex w-full max-w-[85%] sm:max-w-[78%] flex-col gap-1 overflow-hidden', isUser ? 'items-end' : 'items-start')}>
         <div className={cn(
           'rounded-2xl px-4 py-3 shadow-sm',
           isUser
@@ -386,7 +386,7 @@ export function ChatView() {
         {/* Chat container */}
         <div className="mt-4 flex flex-col" style={{ height: 'calc(100vh - 240px)', minHeight: 400 }}>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-5 pb-4 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin space-y-5 pb-4 pr-1">
             {messages.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
