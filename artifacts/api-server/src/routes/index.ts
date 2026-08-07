@@ -6,6 +6,7 @@ import editorRouter from "./editor";
 import chatRouter from "./chat";
 import imageProvidersRouter from "./image-providers";
 import videosRouter from "./videos/index.js";
+import statsRouter from "./stats";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(editorRouter);
 router.use(chatRouter);
 router.use(imageProvidersRouter);
 router.use(videosRouter);
+router.use(statsRouter);
 
 export default router;
