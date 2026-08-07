@@ -145,7 +145,7 @@ function MessageBubble({
           isUser
             ? 'rounded-br-sm bg-primary/15 text-foreground ring-1 ring-primary/20'
             : 'rounded-bl-sm border border-border/80 bg-card text-foreground',
-        )}>
+        )} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           {isUser
             ? <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
             : isLatest
