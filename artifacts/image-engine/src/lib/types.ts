@@ -10,8 +10,7 @@ export type ViewId =
   | 'chat'
   | 'settings'
   | 'admin'
-  | 'videos'
-  | 'videos-admin';
+  | 'videos';
 
 export interface GeneratedImage {
   id: string;

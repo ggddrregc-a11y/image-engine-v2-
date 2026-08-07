@@ -12,7 +12,6 @@ import {
   Wand2,
   MessageSquare,
   Film,
-  Video,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
@@ -36,7 +35,6 @@ const NAV_ITEMS: {
   { id: 'chat', labelKey: 'sidebar.chat', icon: MessageSquare },
   { id: 'videos', labelKey: 'sidebar.videos', icon: Film },
   { id: 'api', labelKey: 'sidebar.api', icon: Code2 },
-  { id: 'videos-admin', labelKey: 'sidebar.videosAdmin', icon: Video, badge: 'Admin' },
   { id: 'admin', labelKey: 'sidebar.admin', icon: Shield, badge: 'Admin' },
 ];
 
