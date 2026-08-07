@@ -17,11 +17,9 @@ import {
   LifeBuoy,
   Megaphone,
   MessageSquare,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
-import { AdminComfyUIPage } from './pages/comfyui-page';
 import { AdminTemplatesPage } from './pages/templates-page';
 import { AdminGenerationSettingsPage } from './pages/gen-settings-page';
 import { AdminQueuePage } from './pages/queue-page';
@@ -36,12 +34,9 @@ import { AdminCreditsPage } from './pages/credits-page';
 import { AdminSupportPage } from './pages/support-page';
 import { AdminBannerPage } from './pages/banner-page';
 import { AdminChatProvidersPage } from './pages/chat-providers-page';
-import { AdminImageProvidersPage } from './pages/image-providers-page';
 
 export type AdminSubPage =
   | 'chat-providers'
-  | 'image-providers'
-  | 'comfyui'
   | 'templates'
   | 'gen-settings'
   | 'queue'
@@ -59,9 +54,7 @@ const SUB_PAGES: {
   icon: React.ComponentType<{ className?: string }>;
   description: string;
 }[] = [
-  { id: 'image-providers', label: 'Image Providers', icon: ImageIcon,        description: 'Manage image generation models & API keys' },
   { id: 'chat-providers',  label: 'Chat Providers',  icon: MessageSquare,    description: 'Manage AI chat models & API keys' },
-  { id: 'comfyui',         label: 'ComfyUI',         icon: Workflow,         description: 'ComfyUI server & workflow configuration' },
   { id: 'image-editor',    label: 'Image Editor',    icon: Wand2,            description: 'Enable/disable AI image editing feature' },
   { id: 'credits',         label: 'Credits',         icon: Zap,              description: 'Visitor credits & cost per operation' },
   { id: 'banner',          label: 'Banner',          icon: Megaphone,        description: 'Announcement bar shown at the top of the site' },
@@ -77,7 +70,7 @@ const SUB_PAGES: {
 export function AdminView() {
   const { isAuthenticated, username, logout } = useAdminAuth();
   const { setActiveView } = useApp();
-  const [subPage, setSubPage] = useState<AdminSubPage>('image-providers');
+  const [subPage, setSubPage] = useState<AdminSubPage>('chat-providers');
 
   if (!isAuthenticated) {
     return <AdminLoginPage />;
@@ -156,9 +149,7 @@ export function AdminView() {
       <div className="mt-6">
         <AnimatePresence mode="wait">
           <AdminPageContainer key={subPage}>
-            {subPage === 'image-providers' && <AdminImageProvidersPage />}
             {subPage === 'chat-providers'  && <AdminChatProvidersPage />}
-            {subPage === 'comfyui'         && <AdminComfyUIPage />}
             {subPage === 'templates'       && <AdminTemplatesPage />}
             {subPage === 'gen-settings'    && <AdminGenerationSettingsPage />}
             {subPage === 'queue'           && <AdminQueuePage />}
