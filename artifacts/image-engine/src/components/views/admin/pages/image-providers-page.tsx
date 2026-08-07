@@ -50,32 +50,35 @@ interface FetchedModel {
 }
 
 const PROVIDER_TYPES = [
-  { value: 'gemini',      label: 'Google Gemini (Image)' },
+  { value: 'gemini',       label: 'Google Gemini (Nano Banana)' },
   { value: 'pollinations', label: 'Pollinations (مجاني بدون Key)' },
-  { value: 'openai',      label: 'OpenAI (DALL·E)' },
-  { value: 'stability',   label: 'Stability AI' },
-  { value: 'replicate',   label: 'Replicate' },
-  { value: 'fal',         label: 'fal.ai' },
-  { value: 'custom',      label: 'Custom / Other' },
+  { value: 'openrouter',   label: 'OpenRouter (100+ موديل)' },
+  { value: 'openai',       label: 'OpenAI (GPT Image / DALL·E)' },
+  { value: 'stability',    label: 'Stability AI (Stable Image)' },
+  { value: 'fal',          label: 'fal.ai (FLUX وغيره)' },
+  { value: 'replicate',    label: 'Replicate' },
+  { value: 'custom',       label: 'Custom / Other' },
 ];
 
 const DEFAULT_URLS: Record<string, string> = {
   gemini:       'https://generativelanguage.googleapis.com',
   pollinations: 'https://image.pollinations.ai',
+  openrouter:   'https://openrouter.ai/api/v1',
   openai:       'https://api.openai.com',
   stability:    'https://api.stability.ai',
+  fal:          'https://queue.fal.run',
   replicate:    'https://api.replicate.com',
-  fal:          'https://fal.run',
   custom:       '',
 };
 
 const DEFAULT_MODELS: Record<string, string> = {
   gemini:       'gemini-3.1-flash-image',
   pollinations: 'flux',
-  openai:       'dall-e-3',
-  stability:    'stable-diffusion-xl-1024-v1-0',
-  replicate:    'stability-ai/sdxl',
+  openrouter:   'black-forest-labs/flux.2-flex',
+  openai:       'gpt-image-2',
+  stability:    'core',
   fal:          'fal-ai/flux/schnell',
+  replicate:    'black-forest-labs/flux-schnell',
   custom:       '',
 };
 
@@ -219,11 +222,12 @@ export function AdminImageProvidersPage() {
       {/* Info box */}
       <AdminCard className="mt-4 p-4">
         <h4 className="mb-3 text-sm font-semibold">كيفية إضافة نموذج صور جديد</h4>
-        <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
           {[
-            { title: 'Google Gemini Image', url: 'generativelanguage.googleapis.com', model: 'gemini-3.1-flash-image-preview', key: 'aistudio.google.com (مجاني 500/يوم)' },
+            { title: 'Google Gemini (Nano Banana)', url: 'generativelanguage.googleapis.com', model: 'gemini-3.1-flash-image', key: 'aistudio.google.com' },
             { title: 'Pollinations (مجاني)', url: 'image.pollinations.ai', model: 'flux', key: 'لا يحتاج API Key' },
-            { title: 'OpenAI DALL·E', url: 'api.openai.com', model: 'dall-e-3', key: 'platform.openai.com' },
+            { title: 'OpenRouter', url: 'openrouter.ai/api/v1', model: 'black-forest-labs/flux.2-flex', key: 'openrouter.ai (مجاني للتسجيل)' },
+            { title: 'OpenAI GPT Image', url: 'api.openai.com', model: 'gpt-image-2', key: 'platform.openai.com' },
           ].map(item => (
             <div key={item.title} className="rounded-xl border border-border bg-secondary/30 p-3">
               <p className="font-semibold text-foreground">{item.title}</p>
@@ -268,6 +272,7 @@ function ImageProviderForm({
   const [modelSearch, setModelSearch] = useState('');
 
   const isPollinations = providerType === 'pollinations';
+  const noKeyNeeded = providerType === 'pollinations';
 
   const handleTypeChange = (v: string) => {
     setProviderType(v);
@@ -381,7 +386,7 @@ function ImageProviderForm({
             <div className="sm:col-span-2">
               <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-500">
                 <Zap className="h-3.5 w-3.5 shrink-0" />
-                Pollinations مجاني بالكامل — لا يحتاج API Key
+                Pollinations مجاني بالكامل — لا يحتاج API Key — بيدعم FLUX وأكتر
               </div>
             </div>
           )}
