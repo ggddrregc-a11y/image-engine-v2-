@@ -31,8 +31,6 @@ const NAV_ITEMS: {
   { id: 'gallery', labelKey: 'sidebar.gallery', icon: Images },
   { id: 'history', labelKey: 'sidebar.history', icon: History },
   { id: 'collections', labelKey: 'sidebar.collections', icon: FolderOpen },
-  { id: 'workflows', labelKey: 'sidebar.workflows', icon: Workflow },
-  { id: 'models', labelKey: 'sidebar.models', icon: Boxes },
   { id: 'chat', labelKey: 'sidebar.chat', icon: MessageSquare },
   { id: 'api', labelKey: 'sidebar.api', icon: Code2 },
   { id: 'admin', labelKey: 'sidebar.admin', icon: Shield, badge: 'Admin' },
