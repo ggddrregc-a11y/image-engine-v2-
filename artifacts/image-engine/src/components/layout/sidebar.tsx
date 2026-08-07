@@ -162,6 +162,20 @@ export function Sidebar({
         })}
       </nav>
 
+      {/* إعلان 300x250 — مخفي لو collapsed أو في الأدمن */}
+      {!collapsed && activeView !== 'admin' && (
+        <div className="px-3 pb-2 overflow-hidden">
+          <div className="flex items-center justify-center rounded-xl overflow-hidden border border-border/30">
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `atOptions = {'key':'1d999c815155d29961fe491bca4e770a','format':'iframe','height':250,'width':300,'params':{}};`,
+              }}
+            />
+            <script src="https://www.highperformanceformat.com/1d999c815155d29961fe491bca4e770a/invoke.js" async />
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-border p-3">
         <button
           onClick={onToggle}
