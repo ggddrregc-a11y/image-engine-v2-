@@ -22,6 +22,10 @@ import {
   X,
   FileText,
   Image as ImageIcon,
+  Plus,
+  Trash2,
+  Clock,
+  ArrowLeft,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
@@ -41,6 +45,13 @@ interface Message {
   content: string;
   timestamp: Date;
   attachments?: Attachment[];
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ChatProviderOption {
@@ -319,6 +330,115 @@ function MessageBubble({
   );
 }
 
+/* ── Sessions List ──────────────────────────────────────────────── */
+function SessionsList({
+  sessions,
+  onSelect,
+  onNew,
+  onDelete,
+  isLoading,
+}: {
+  sessions: ChatSession[];
+  onSelect: (s: ChatSession) => void;
+  onNew: () => void;
+  onDelete: (id: string) => void;
+  isLoading: boolean;
+}) {
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return 'أمس';
+    if (diffDays < 7) return `منذ ${diffDays} أيام`;
+    return d.toLocaleDateString('ar', { month: 'short', day: 'numeric' });
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
+      <PageContainer>
+        <PageHeader
+          title="AI Chat"
+          description="محادثاتك مع الذكاء الاصطناعي"
+          icon={MessageSquare}
+          actions={
+            <button
+              onClick={onNew}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-medium text-black transition-all hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              محادثة جديدة
+            </button>
+          }
+        />
+
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="flex flex-col gap-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 rounded-2xl border border-border bg-card/50 animate-pulse" />
+              ))}
+            </div>
+          ) : sessions.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center gap-6 py-20"
+            >
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-primary/30 bg-primary/10">
+                <MessageSquare className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-center space-y-1">
+                <h2 className="text-lg font-bold">لا توجد محادثات بعد</h2>
+                <p className="text-sm text-muted-foreground">ابدأ محادثة جديدة مع الذكاء الاصطناعي</p>
+              </div>
+              <button
+                onClick={onNew}
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-black transition-all hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                ابدأ محادثة جديدة
+              </button>
+            </motion.div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {sessions.map((s, i) => (
+                <motion.div
+                  key={s.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="group flex items-center gap-3 rounded-2xl border border-border bg-card/50 px-4 py-3.5 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm cursor-pointer"
+                  onClick={() => onSelect(s)}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                    <BrainCircuit className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Clock className="h-3 w-3 text-muted-foreground/50" />
+                      <span className="text-[11px] text-muted-foreground/60">{formatDate(s.updated_at)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); onDelete(s.id); }}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                    title="حذف المحادثة"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PageContainer>
+    </div>
+  );
+}
+
 /* ── Model Selector ─────────────────────────────────────────────── */
 function ModelSelector({
   providers,
@@ -406,14 +526,15 @@ const STORAGE_KEY = 'chat_messages';
 
 export function ChatView() {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return [];
-      const parsed = JSON.parse(saved) as { id: string; role: string; content: string; timestamp: string }[];
-      return parsed.map(m => ({ ...m, role: m.role as 'user' | 'assistant', timestamp: new Date(m.timestamp) }));
-    } catch { return []; }
-  });
+
+  // ── Session state ──
+  const [view, setView] = useState<'list' | 'chat'>('list');
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
+
+  // ── Chat state ──
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -428,7 +549,12 @@ export function ChatView() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch available providers
+  // جلب الجلسات عند الفتح
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  // جلب الـ providers
   useEffect(() => {
     fetch('/api/chat/providers')
       .then(r => r.json())
@@ -442,16 +568,69 @@ export function ChatView() {
       .catch(() => {});
   }, []);
 
+  async function fetchSessions() {
+    setSessionsLoading(true);
+    try {
+      const r = await fetch('/api/chat/sessions');
+      const data = await r.json() as { ok: boolean; sessions?: ChatSession[] };
+      if (data.ok) setSessions(data.sessions ?? []);
+    } catch {
+      // لو الـ backend مش شغال نبقى في وضع بدون sessions
+    } finally {
+      setSessionsLoading(false);
+    }
+  }
+
+  // فتح جلسة موجودة
+  async function openSession(session: ChatSession) {
+    setActiveSession(session);
+    setMessages([]);
+    setView('chat');
+    try {
+      const r = await fetch(`/api/chat/sessions/${session.id}/messages`);
+      const data = await r.json() as { ok: boolean; messages?: { id: string; role: string; content: string; created_at: string }[] };
+      if (data.ok && data.messages) {
+        setMessages(data.messages.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: new Date(m.created_at),
+        })));
+      }
+    } catch { /* نكمل بدون رسائل */ }
+  }
+
+  // إنشاء جلسة جديدة
+  async function startNewSession() {
+    setActiveSession(null);
+    setMessages([]);
+    setInput('');
+    setAttachments([]);
+    setLatestId(null);
+    setView('chat');
+  }
+
+  // حذف جلسة
+  async function deleteSession(id: string) {
+    try {
+      await fetch(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch {
+      toast({ title: 'خطأ', description: 'تعذّر حذف المحادثة', variant: 'destructive' });
+    }
+  }
+
+  // الرجوع لقائمة الجلسات
+  function goBack() {
+    setView('list');
+    setActiveSession(null);
+    setMessages([]);
+    fetchSessions();
+  }
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
-
-  // Save messages to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    } catch { /* quota exceeded */ }
-  }, [messages]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -477,6 +656,32 @@ export function ChatView() {
     setInput('');
     setAttachments([]);
     setIsLoading(true);
+
+    // لو مفيش session نعمل واحدة جديدة بأول رسالة كـ title
+    let sessionId = activeSession?.id;
+    if (!sessionId) {
+      try {
+        const r = await fetch('/api/chat/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: trimmed.slice(0, 80) }),
+        });
+        const d = await r.json() as { ok: boolean; session?: ChatSession };
+        if (d.ok && d.session) {
+          setActiveSession(d.session);
+          sessionId = d.session.id;
+        }
+      } catch { /* نكمل بدون session */ }
+    }
+
+    // حفظ رسالة المستخدم في DB
+    if (sessionId) {
+      fetch(`/api/chat/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'user', content: trimmed }),
+      }).catch(() => {});
+    }
 
     try {
       const res = await fetch('/api/chat', {
@@ -509,13 +714,22 @@ export function ChatView() {
       const aMsg: Message = { id: `a-${Date.now()}`, role: 'assistant', content: data.reply ?? '', timestamp: new Date() };
       setMessages(p => [...p, aMsg]);
       setLatestId(aMsg.id);
+
+      // حفظ رد الـ AI في DB
+      if (sessionId) {
+        fetch(`/api/chat/sessions/${sessionId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'assistant', content: data.reply ?? '' }),
+        }).catch(() => {});
+      }
     } catch (err) {
       toast({ title: 'خطأ', description: String(err), variant: 'destructive' });
       setMessages(p => p.filter(m => m.id !== userMsg.id));
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, toast, selectedProviderId, attachments]);
+  }, [isLoading, toast, selectedProviderId, attachments, activeSession]);
 
   // معالجة الملفات المختارة
   const handleFiles = useCallback((files: FileList | null) => {
@@ -524,7 +738,6 @@ export function ChatView() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        // result = "data:mimeType;base64,xxxx"
         const base64 = result.split(',')[1];
         const isImage = file.type.startsWith('image/');
         const att: Attachment = {
@@ -550,32 +763,43 @@ export function ChatView() {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleClear = () => {
-    setMessages([]);
-    setInput('');
-    setAttachments([]);
-    setLatestId(null);
-    localStorage.removeItem(STORAGE_KEY);
-  };
+  // ── عرض قائمة الجلسات ──
+  if (view === 'list') {
+    return (
+      <SessionsList
+        sessions={sessions}
+        onSelect={openSession}
+        onNew={startNewSession}
+        onDelete={deleteSession}
+        isLoading={sessionsLoading}
+      />
+    );
+  }
 
+  // ── عرض المحادثة ──
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
       <PageContainer>
         <PageHeader
-          title="AI Chat"
+          title={activeSession?.title ?? 'محادثة جديدة'}
           description="تحدث مع الذكاء الاصطناعي"
           icon={MessageSquare}
           actions={
             <div className="flex items-center gap-2">
-              {messages.length > 0 && (
-                <button
-                  onClick={handleClear}
-                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  محادثة جديدة
-                </button>
-              )}
+              <button
+                onClick={goBack}
+                className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                المحادثات
+              </button>
+              <button
+                onClick={startNewSession}
+                className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-card hover:text-foreground"
+              >
+                <Plus className="h-3 w-3" />
+                محادثة جديدة
+              </button>
             </div>
           }
         />

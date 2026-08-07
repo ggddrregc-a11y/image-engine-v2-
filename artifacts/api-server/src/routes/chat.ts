@@ -144,6 +144,116 @@ function isChatSupported(modelId: string, modelObject?: Record<string, unknown>)
   return { supported: false, reason: "Unknown model type" };
 }
 
+/* ─── Session helpers ────────────────────────────────────────────── */
+
+async function supabaseFetch(path: string, options: RequestInit = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+      ...(options.headers as Record<string, string> ?? {}),
+    },
+  });
+}
+
+/**
+ * GET /api/chat/sessions — جلب كل الجلسات مرتبة من الأحدث
+ */
+router.get("/chat/sessions", async (_req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return res.json({ ok: true, sessions: [] });
+  try {
+    const r = await supabaseFetch("/chat_sessions?select=id,title,created_at,updated_at&order=updated_at.desc");
+    if (!r.ok) throw new Error(`Supabase error ${r.status}`);
+    const data = await r.json();
+    return res.json({ ok: true, sessions: data });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/**
+ * POST /api/chat/sessions — إنشاء جلسة جديدة
+ * body: { title: string }
+ */
+router.post("/chat/sessions", async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase not configured" });
+  const { title } = req.body as { title?: string };
+  try {
+    const r = await supabaseFetch("/chat_sessions", {
+      method: "POST",
+      body: JSON.stringify({ title: title?.trim() || "محادثة جديدة" }),
+    });
+    if (!r.ok) throw new Error(`Supabase error ${r.status}`);
+    const data = await r.json();
+    const session = Array.isArray(data) ? data[0] : data;
+    return res.json({ ok: true, session });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/**
+ * DELETE /api/chat/sessions/:id — حذف جلسة (والرسائل بتاعتها cascade)
+ */
+router.delete("/chat/sessions/:id", async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase not configured" });
+  const { id } = req.params;
+  try {
+    const r = await supabaseFetch(`/chat_sessions?id=eq.${id}`, { method: "DELETE" });
+    if (!r.ok) throw new Error(`Supabase error ${r.status}`);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/**
+ * GET /api/chat/sessions/:id/messages — جلب رسائل جلسة معينة
+ */
+router.get("/chat/sessions/:id/messages", async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return res.json({ ok: true, messages: [] });
+  const { id } = req.params;
+  try {
+    const r = await supabaseFetch(`/chat_messages?session_id=eq.${id}&order=created_at.asc&select=id,role,content,created_at`);
+    if (!r.ok) throw new Error(`Supabase error ${r.status}`);
+    const data = await r.json();
+    return res.json({ ok: true, messages: data });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/**
+ * POST /api/chat/sessions/:id/messages — حفظ رسالة في جلسة
+ * body: { role: 'user'|'assistant', content: string }
+ */
+router.post("/chat/sessions/:id/messages", async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase not configured" });
+  const { id } = req.params;
+  const { role, content } = req.body as { role?: string; content?: string };
+  try {
+    // حفظ الرسالة
+    const r = await supabaseFetch("/chat_messages", {
+      method: "POST",
+      body: JSON.stringify({ session_id: id, role, content }),
+    });
+    if (!r.ok) throw new Error(`Supabase error ${r.status}`);
+    const data = await r.json();
+    const message = Array.isArray(data) ? data[0] : data;
+    // تحديث updated_at للـ session
+    await supabaseFetch(`/chat_sessions?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ updated_at: new Date().toISOString() }),
+    });
+    return res.json({ ok: true, message });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
 /**
  * POST /api/chat/fetch-models
  */
