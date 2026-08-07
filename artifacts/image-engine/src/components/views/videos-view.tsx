@@ -3,28 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Search, X, Play, Clock, Calendar,
   ChevronLeft, ChevronRight, Film, ExternalLink,
-  Plus, Trash2, Loader2, Link,
+  Plus, Trash2, Loader2, Link, RefreshCw,
+  CheckCircle2, AlertCircle, Wifi, WifiOff,
+  SkipForward, ArrowDownToLine,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-/* ─── Types ─────────────────────────────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────────────── */
 interface VideoFormat { quality: string; ext: string; url: string; filesize?: number }
 interface PageVideo {
   id: string; title: string; thumbnail_url: string;
   published_at: string | null; duration_seconds: number;
   post_url: string; download_formats: VideoFormat[];
 }
+interface SyncEvent {
+  type: 'start' | 'progress' | 'processing' | 'video' | 'error' | 'done';
+  message?: string; fetched?: number; action?: 'added' | 'updated' | 'skipped';
+  title?: string; added?: number; updated?: number; skipped?: number; errors?: number;
+}
+interface Stats {
+  total: number;
+  lastSync: { started_at: string; status: string; added_count: number } | null;
+  fbConfigured: boolean;
+}
 
-/* ─── Helpers ───────────────────────────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────────── */
 function fmtDuration(s: number) {
   if (!s) return '';
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  return `${m}:${String(sec).padStart(2,'0')}`;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  return `${m}:${String(sec).padStart(2, '0')}`;
 }
 function fmtDate(iso: string | null) {
   if (!iso) return '';
@@ -46,7 +58,128 @@ const QUALITY_COLORS: Record<string, string> = {
   'audio': 'bg-pink-500/15 text-pink-400 border-pink-500/20',
 };
 
-/* ─── Download Modal ────────────────────────────────────────────── */
+/* ─── FB Config Banner ───────────────────────────────────────────── */
+function FbConfigBanner() {
+  return (
+    <div className="mb-5 flex items-start gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
+      <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-yellow-500">Facebook غير مُهيأ</p>
+        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+          أضف <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">FACEBOOK_ACCESS_TOKEN</code> و
+          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">FACEBOOK_PAGE_ID</code> في متغيرات البيئة لتفعيل المزامنة التلقائية.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Sync Progress Panel ────────────────────────────────────────── */
+interface SyncState {
+  running: boolean;
+  log: string[];
+  added: number; updated: number; skipped: number; errors: number;
+  done: boolean;
+}
+function SyncPanel({ onDone }: { onDone: () => void }) {
+  const { toast } = useToast();
+  const [state, setState] = useState<SyncState>({
+    running: false, log: [], added: 0, updated: 0, skipped: 0, errors: 0, done: false,
+  });
+  const logRef = useRef<HTMLDivElement>(null);
+
+  async function startSync() {
+    setState({ running: true, log: ['جاري الاتصال...'], added: 0, updated: 0, skipped: 0, errors: 0, done: false });
+    try {
+      const res = await fetch('/api/videos/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page_url: 'graph-api' }),
+      });
+      if (!res.body) throw new Error('No response body');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          try {
+            const ev = JSON.parse(line.slice(5).trim()) as SyncEvent;
+            setState(prev => {
+              const newLog = [...prev.log];
+              if (ev.type === 'video' && ev.title) {
+                const icon = ev.action === 'added' ? '✅' : ev.action === 'updated' ? '🔄' : '⏭️';
+                newLog.push(`${icon} ${ev.title}`);
+              } else if (ev.type === 'error' && ev.message) {
+                newLog.push(`❌ ${ev.message}`);
+              } else if (ev.type === 'progress' && ev.message) {
+                newLog[newLog.length - 1] = `⏳ ${ev.message}`;
+              } else if (ev.type === 'processing' && ev.message) {
+                newLog.push(`⏳ ${ev.message}`);
+              }
+              if (ev.type === 'done') {
+                return { ...prev, running: false, done: true, log: newLog,
+                  added: ev.added ?? 0, updated: ev.updated ?? 0,
+                  skipped: ev.skipped ?? 0, errors: ev.errors ?? 0 };
+              }
+              return { ...prev, log: newLog };
+            });
+          } catch { /* skip malformed */ }
+        }
+      }
+    } catch (err) {
+      setState(prev => ({ ...prev, running: false, done: true, errors: 1,
+        log: [...prev.log, `❌ ${String(err)}`] }));
+    }
+  }
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [state.log]);
+
+  useEffect(() => {
+    if (state.done && state.added > 0) {
+      toast({ title: 'اكتملت المزامنة', description: `أُضيف ${state.added} فيديو جديد` });
+      onDone();
+    }
+  }, [state.done, state.added, toast, onDone]);
+
+  return (
+    <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <RefreshCw className={cn('h-4 w-4', state.running && 'animate-spin')} />
+          مزامنة الصفحة كاملة
+        </p>
+        {state.done && (
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-green-500"><CheckCircle2 className="h-3 w-3" />{state.added} جديد</span>
+            <span className="flex items-center gap-1 text-blue-400"><RefreshCw className="h-3 w-3" />{state.updated} محدَّث</span>
+            <span className="flex items-center gap-1"><SkipForward className="h-3 w-3" />{state.skipped} بدون تغيير</span>
+            {state.errors > 0 && <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-3 w-3" />{state.errors} خطأ</span>}
+          </div>
+        )}
+      </div>
+      {state.log.length > 0 && (
+        <div ref={logRef} className="mb-3 max-h-48 overflow-y-auto rounded-xl border border-border bg-background/50 p-3 space-y-1 text-[11px] font-mono text-muted-foreground">
+          {state.log.map((l, i) => <p key={i}>{l}</p>)}
+        </div>
+      )}
+      <button onClick={startSync} disabled={state.running}
+        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-black disabled:opacity-50 hover:opacity-90 transition-opacity">
+        {state.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        {state.running ? 'جاري المزامنة...' : state.done ? 'مزامنة مجدداً' : 'بدء المزامنة'}
+      </button>
+    </div>
+  );
+}
+
+/* ─── Download Modal ─────────────────────────────────────────────── */
 function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
@@ -56,10 +189,17 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
       >
+        {/* Header */}
         <div className="flex items-start gap-3 p-5 border-b border-border">
-          <img src={video.thumbnail_url} alt={video.title}
-            className="h-16 w-28 shrink-0 rounded-xl object-cover bg-secondary"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          {video.thumbnail_url ? (
+            <img src={video.thumbnail_url} alt={video.title}
+              className="h-16 w-28 shrink-0 rounded-xl object-cover bg-secondary"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          ) : (
+            <div className="flex h-16 w-28 shrink-0 items-center justify-center rounded-xl bg-secondary">
+              <Film className="h-6 w-6 text-muted-foreground/40" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold leading-snug line-clamp-2">{video.title}</p>
             {video.duration_seconds > 0 && (
@@ -72,6 +212,8 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Formats */}
         <div className="p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">اختر الجودة</p>
           {video.download_formats.length === 0 ? (
@@ -85,7 +227,8 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
             </div>
           ) : (
             video.download_formats.map(fmt => (
-              <a key={fmt.quality} href={fmt.url} download target="_blank" rel="noopener noreferrer"
+              <a key={fmt.quality} href={fmt.url} download={`${video.title}.${fmt.ext}`}
+                target="_blank" rel="noopener noreferrer"
                 className="group flex items-center gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm">
                 <span className={cn('shrink-0 rounded-lg border px-2.5 py-1 text-xs font-bold',
                   QUALITY_COLORS[fmt.quality] ?? 'bg-secondary text-foreground border-border')}>
@@ -93,18 +236,21 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{fmt.quality === 'audio' ? 'صوت فقط' : `فيديو ${fmt.quality}`}</p>
-                  <p className="text-[11px] text-muted-foreground">{fmt.ext.toUpperCase()}{fmt.filesize ? ` · ${fmtSize(fmt.filesize)}` : ''}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {fmt.ext.toUpperCase()}{fmt.filesize ? ` · ${fmtSize(fmt.filesize)}` : ''}
+                  </p>
                 </div>
-                <Download className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                <ArrowDownToLine className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
               </a>
             ))
           )}
         </div>
+
         {video.post_url && video.download_formats.length > 0 && (
           <div className="border-t border-border px-4 py-3">
             <a href={video.post_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-              <ExternalLink className="h-3 w-3" />فتح المنشور الأصلي
+              <ExternalLink className="h-3 w-3" />فتح المنشور الأصلي على فيسبوك
             </a>
           </div>
         )}
@@ -113,7 +259,7 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
   );
 }
 
-/* ─── Add Video Panel ───────────────────────────────────────────── */
+/* ─── Add Single Video Panel ─────────────────────────────────────── */
 function AddVideoPanel({ onAdded }: { onAdded: (v: PageVideo) => void }) {
   const { toast } = useToast();
   const [url, setUrl] = useState('');
@@ -131,43 +277,38 @@ function AddVideoPanel({ onAdded }: { onAdded: (v: PageVideo) => void }) {
       });
       const data = await res.json() as { ok: boolean; video?: PageVideo; error?: string };
       if (data.ok && data.video) {
-        toast({ title: 'تم الإضافة بنجاح', description: data.video.title });
+        toast({ title: 'تم الإضافة', description: data.video.title });
         onAdded(data.video);
         setUrl('');
       } else {
         toast({ title: 'فشل الاستخراج', description: data.error ?? 'تعذّر استخراج الفيديو', variant: 'destructive' });
       }
     } catch (err) {
-      toast({ title: 'خطأ', description: String(err), variant: 'destructive' });
+      toast({ title: 'خطأ في الاتصال', description: String(err), variant: 'destructive' });
     } finally { setLoading(false); }
   }
 
   return (
-    <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-      <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-primary">
-        <Link className="h-4 w-4" />أضف فيديو برابطه
+    <div className="rounded-2xl border border-border bg-card/50 p-4">
+      <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold">
+        <Link className="h-4 w-4 text-muted-foreground" />أضف فيديو برابطه أو ID
       </p>
       <div className="flex gap-2">
-        <input
-          value={url} onChange={e => setUrl(e.target.value)}
+        <input value={url} onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          placeholder="https://www.facebook.com/watch?v=... أو /reel/ أو /videos/"
-          className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary/50"
-        />
+          placeholder="رابط الفيديو أو Video ID..."
+          className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50 transition-colors" />
         <button onClick={handleAdd} disabled={loading || !url.trim()}
           className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-black disabled:opacity-50 hover:opacity-90 transition-opacity">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           {loading ? 'جاري...' : 'إضافة'}
         </button>
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        ملاحظة: استخدم الرابط المباشر للفيديو (يحتوي على /videos/ أو /reel/ أو watch?v=)
-      </p>
     </div>
   );
 }
 
-/* ─── Video Card ────────────────────────────────────────────────── */
+/* ─── Video Card ─────────────────────────────────────────────────── */
 function VideoCard({ video, onDownload, onDelete }: {
   video: PageVideo; onDownload: (v: PageVideo) => void; onDelete: (id: string) => void;
 }) {
@@ -180,7 +321,7 @@ function VideoCard({ video, onDownload, onDelete }: {
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/50 transition-all hover:border-primary/30 hover:bg-card hover:shadow-lg"
     >
-      {/* Delete button */}
+      {/* Delete */}
       <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         {confirmDel ? (
           <div className="flex items-center gap-1">
@@ -230,26 +371,24 @@ function VideoCard({ video, onDownload, onDelete }: {
       {/* Info */}
       <div className="flex flex-1 flex-col p-3.5">
         <p className="line-clamp-2 text-sm font-medium leading-snug">{video.title}</p>
-        <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
           {video.published_at && (
             <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(video.published_at)}</span>
           )}
           {video.download_formats.length > 0 && (
-            <span className="flex items-center gap-1">
-              <Download className="h-3 w-3" />{video.download_formats.length} جودة
-            </span>
+            <span className="flex items-center gap-1"><Download className="h-3 w-3" />{video.download_formats.length} جودة</span>
           )}
         </div>
         <button onClick={() => onDownload(video)}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-black">
-          <Download className="h-3.5 w-3.5" />تحميل
+          <ArrowDownToLine className="h-3.5 w-3.5" />تحميل
         </button>
       </div>
     </motion.div>
   );
 }
 
-/* ─── Main View ─────────────────────────────────────────────────── */
+/* ─── Main View ──────────────────────────────────────────────────── */
 const PAGE_SIZE = 20;
 
 export function VideosView() {
@@ -261,6 +400,7 @@ export function VideosView() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PageVideo | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (p: number, q: string) => {
@@ -274,7 +414,16 @@ export function VideosView() {
     } catch { /* silent */ } finally { setLoading(false); }
   }, []);
 
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/videos/stats');
+      const data = await res.json() as Stats & { ok: boolean };
+      if (data.ok) setStats(data);
+    } catch { /* silent */ }
+  }, []);
+
   useEffect(() => { load(page, query); }, [page, query, load]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault(); setPage(1); setQuery(search);
@@ -295,44 +444,80 @@ export function VideosView() {
     } catch { toast({ title: 'خطأ في الحذف', variant: 'destructive' }); }
   }
 
+  function handleSyncDone() { void load(1, query); void loadStats(); setPage(1); }
+
   const totalPages = Math.ceil(total / PAGE_SIZE);
+  const fbConfigured = stats?.fbConfigured ?? true; // افتراض إنه مهيأ لحد ما نعرف
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
       <PageContainer>
+        {/* Header */}
         <PageHeader
           title="مركز تحميل الفيديوهات"
-          description={total > 0 ? `${total} فيديو متاح للتحميل` : 'أضف فيديوهات وشاركها'}
+          description={
+            total > 0
+              ? `${total} فيديو متاح للتحميل${stats?.lastSync ? ` · آخر مزامنة: ${new Date(stats.lastSync.started_at).toLocaleDateString('ar')}` : ''}`
+              : 'مزامنة وتحميل فيديوهات صفحتك'
+          }
           icon={Film}
         />
 
-        {/* Add Video */}
-        <div className="mt-5">
+        <div className="mt-5 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+          {/* Facebook Config Banner */}
+          {stats && !fbConfigured && <FbConfigBanner />}
+
+          {/* Connection status chip */}
+          {stats && (
+            <div className="flex items-center gap-2">
+              <span className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
+                fbConfigured
+                  ? 'border-green-500/20 bg-green-500/10 text-green-500'
+                  : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-500')}>
+                {fbConfigured ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                {fbConfigured ? 'Facebook متصل' : 'Facebook غير مُهيأ'}
+              </span>
+              {stats.lastSync && (
+                <span className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs',
+                  stats.lastSync.status === 'completed'
+                    ? 'border-border text-muted-foreground'
+                    : 'border-destructive/20 text-destructive')}>
+                  {stats.lastSync.status === 'completed'
+                    ? <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    : <AlertCircle className="h-3 w-3" />}
+                  آخر مزامنة: {stats.lastSync.status === 'completed' ? `+${stats.lastSync.added_count ?? 0}` : 'فشلت'}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Sync Panel — يظهر فقط لو FB مُهيأ */}
+          {fbConfigured && <SyncPanel onDone={handleSyncDone} />}
+
+          {/* Add single video */}
           <AddVideoPanel onAdded={handleAdded} />
-        </div>
 
-        {/* Search */}
-        <form onSubmit={handleSearch} className="flex gap-2 mb-5">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="ابحث باسم الفيديو..."
-              className="w-full rounded-xl border border-border bg-card/80 py-2.5 pr-9 pl-9 text-sm outline-none transition-colors focus:border-primary/50" />
-            {search && (
-              <button type="button" onClick={clearSearch}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <button type="submit"
-            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-black hover:opacity-90 transition-opacity">
-            بحث
-          </button>
-        </form>
+          {/* Search */}
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="ابحث باسم الفيديو..."
+                className="w-full rounded-xl border border-border bg-card/80 py-2.5 pr-9 pl-9 text-sm outline-none transition-colors focus:border-primary/50" />
+              {search && (
+                <button type="button" onClick={clearSearch}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <button type="submit"
+              className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-black hover:opacity-90 transition-opacity">
+              بحث
+            </button>
+          </form>
 
-        {/* Grid */}
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+          {/* Videos Grid */}
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -355,11 +540,16 @@ export function VideosView() {
               <div>
                 <p className="font-semibold">{query ? 'لا توجد نتائج' : 'لا توجد فيديوهات بعد'}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {query ? `لم يتم العثور على فيديوهات تطابق "${query}"` : 'أضف أول فيديو من خلال الحقل أعلاه'}
+                  {query
+                    ? `لم يتم العثور على فيديوهات تطابق "${query}"`
+                    : fbConfigured
+                      ? 'اضغط "بدء المزامنة" لجلب كل فيديوهات صفحتك'
+                      : 'أضف فيديو من خلال الحقل أعلاه أو هيّئ Facebook للمزامنة التلقائية'}
                 </p>
               </div>
               {query && (
-                <button onClick={clearSearch} className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary">
+                <button onClick={clearSearch}
+                  className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary">
                   <X className="h-3.5 w-3.5" />مسح البحث
                 </button>
               )}
@@ -369,14 +559,18 @@ export function VideosView() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <AnimatePresence mode="popLayout">
                   {videos.map((v, i) => (
-                    <motion.div key={v.id} layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}>
+                    <motion.div key={v.id} layout
+                      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.03 }}>
                       <VideoCard video={v} onDownload={setSelected} onDelete={handleDelete} />
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
+
+              {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
+                <div className="mt-8 flex items-center justify-center gap-2 pb-6">
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40">
                     <ChevronRight className="h-4 w-4" />
@@ -392,7 +586,9 @@ export function VideosView() {
                       return (
                         <button key={p} onClick={() => setPage(p)}
                           className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all',
-                            p === page ? 'bg-primary text-black' : 'border border-border text-muted-foreground hover:bg-secondary')}>
+                            p === page
+                              ? 'bg-primary text-black'
+                              : 'border border-border text-muted-foreground hover:bg-secondary')}>
                           {p}
                         </button>
                       );
@@ -409,6 +605,7 @@ export function VideosView() {
         </div>
       </PageContainer>
 
+      {/* Download Modal */}
       <AnimatePresence>
         {selected && <DownloadModal video={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>

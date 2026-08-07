@@ -1,13 +1,18 @@
 import { Router } from "express";
 import { extractSingleVideo, extractPageVideos } from "./extractor.js";
+import { testConnection, getConfig } from "./facebook-graph.js";
 
 const router = Router();
 
+/* ─── Supabase config ────────────────────────────────────────────── */
 const SUPABASE_URL = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"] ?? "";
-const SUPABASE_KEY = process.env["VITE_SUPABASE_SERVICE_KEY"] ?? process.env["SUPABASE_SERVICE_KEY"] ??
-  process.env["VITE_SUPABASE_ANON_KEY"] ?? process.env["SUPABASE_ANON_KEY"] ?? "";
+const SUPABASE_KEY =
+  process.env["VITE_SUPABASE_SERVICE_KEY"] ??
+  process.env["SUPABASE_SERVICE_KEY"] ??
+  process.env["VITE_SUPABASE_ANON_KEY"] ??
+  process.env["SUPABASE_ANON_KEY"] ??
+  "";
 
-/* ─── Supabase helper ───────────────────────────────────────────── */
 async function sbFetch(path: string, options: RequestInit = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
     ...options,
@@ -16,14 +21,18 @@ async function sbFetch(path: string, options: RequestInit = {}) {
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "Content-Type": "application/json",
       Prefer: "return=representation",
-      ...(options.headers as Record<string, string> ?? {}),
+      ...((options.headers as Record<string, string>) ?? {}),
     },
   });
 }
 
-/* ─── GET /api/videos ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   GET /api/videos
+   جلب الفيديوهات مع pagination وبحث
+═══════════════════════════════════════════════════════════════════ */
 router.get("/videos", async (req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.json({ ok: true, videos: [], total: 0 });
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.json({ ok: true, videos: [], total: 0 });
 
   const search = String(req.query["search"] ?? "").trim();
   const page = Math.max(1, parseInt(String(req.query["page"] ?? "1"), 10));
@@ -32,17 +41,19 @@ router.get("/videos", async (req, res) => {
 
   let filter = "order=published_at.desc.nullslast";
   if (search) {
-    const encoded = encodeURIComponent(`%${search}%`);
-    filter += `&title=ilike.${encoded}`;
+    filter += `&title=ilike.${encodeURIComponent(`%${search}%`)}`;
   }
   filter += `&limit=${limit}&offset=${offset}`;
 
   try {
     const [dataRes, countRes] = await Promise.all([
-      sbFetch(`/page_videos?select=id,fb_video_id,title,thumbnail_url,published_at,duration_seconds,post_url,download_formats&${filter}`),
-      sbFetch(`/page_videos?select=id&${search ? `title=ilike.${encodeURIComponent(`%${search}%`)}&` : ""}limit=1`, {
-        headers: { Prefer: "count=exact" },
-      }),
+      sbFetch(
+        `/page_videos?select=id,fb_video_id,title,thumbnail_url,published_at,duration_seconds,post_url,download_formats&${filter}`
+      ),
+      sbFetch(
+        `/page_videos?select=id${search ? `&title=ilike.${encodeURIComponent(`%${search}%`)}` : ""}&limit=1`,
+        { headers: { Prefer: "count=exact" } }
+      ),
     ]);
 
     if (!dataRes.ok) throw new Error(`Supabase error ${dataRes.status}`);
@@ -56,28 +67,53 @@ router.get("/videos", async (req, res) => {
   }
 });
 
-/* ─── GET /api/videos/stats ───────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   GET /api/videos/stats
+   إحصاءات سريعة + حالة الـ Facebook config
+═══════════════════════════════════════════════════════════════════ */
 router.get("/videos/stats", async (_req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.json({ ok: true, total: 0, lastSync: null });
+  const { ready } = getConfig();
+
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.json({ ok: true, total: 0, lastSync: null, fbConfigured: ready });
+
   try {
     const [countRes, syncRes] = await Promise.all([
       sbFetch("/page_videos?select=id", { headers: { Prefer: "count=exact" } }),
-      sbFetch("/video_sync_logs?select=started_at,status&order=started_at.desc&limit=1"),
+      sbFetch("/video_sync_logs?select=started_at,status,added_count&order=started_at.desc&limit=1"),
     ]);
+
     const totalHeader = countRes.headers.get("content-range");
     const total = totalHeader ? parseInt(totalHeader.split("/")[1] ?? "0", 10) : 0;
-    const syncData = await syncRes.json() as { started_at: string; status: string }[];
-    return res.json({ ok: true, total, lastSync: syncData[0] ?? null });
+    const syncData = (await syncRes.json()) as {
+      started_at: string;
+      status: string;
+      added_count: number;
+    }[];
+
+    return res.json({
+      ok: true,
+      total,
+      lastSync: syncData[0] ?? null,
+      fbConfigured: ready,
+    });
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err) });
   }
 });
 
-/* ─── GET /api/videos/sync-logs ──────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   GET /api/videos/sync-logs
+   آخر 20 سجل مزامنة
+═══════════════════════════════════════════════════════════════════ */
 router.get("/videos/sync-logs", async (_req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.json({ ok: true, logs: [] });
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.json({ ok: true, logs: [] });
+
   try {
-    const r = await sbFetch("/video_sync_logs?select=*&order=started_at.desc&limit=20");
+    const r = await sbFetch(
+      "/video_sync_logs?select=*&order=started_at.desc&limit=20"
+    );
     if (!r.ok) throw new Error(`Supabase error ${r.status}`);
     const logs = await r.json();
     return res.json({ ok: true, logs });
@@ -86,24 +122,60 @@ router.get("/videos/sync-logs", async (_req, res) => {
   }
 });
 
-/* ─── POST /api/videos/extract-single ────────────────────────── */
-// استخراج وحفظ فيديو واحد من رابطه
+/* ═══════════════════════════════════════════════════════════════════
+   POST /api/videos/test-connection
+   اختبار الاتصال بـ Facebook Graph API
+═══════════════════════════════════════════════════════════════════ */
+router.post("/videos/test-connection", async (_req, res) => {
+  const { token, pageId, ready } = getConfig();
+
+  if (!ready) {
+    return res.status(400).json({
+      ok: false,
+      error: "FACEBOOK_ACCESS_TOKEN أو FACEBOOK_PAGE_ID غير مُهيأ في متغيرات البيئة.",
+    });
+  }
+
+  const result = await testConnection(token, pageId);
+
+  if (!result.ok) {
+    return res.status(502).json({ ok: false, error: result.error });
+  }
+
+  return res.json({
+    ok: true,
+    pageName: result.pageName,
+    videoCount: result.videoCount,
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   POST /api/videos/extract-single
+   استخراج وحفظ فيديو واحد (رابط مباشر أو Video ID)
+═══════════════════════════════════════════════════════════════════ */
 router.post("/videos/extract-single", async (req, res) => {
   const { url } = req.body as { url?: string };
-  if (!url?.trim()) return res.status(400).json({ ok: false, error: "url is required" });
+  if (!url?.trim())
+    return res.status(400).json({ ok: false, error: "url is required" });
 
   const result = await extractSingleVideo(url.trim());
+
   if (!result.ok || !result.videos?.length) {
     return res.status(502).json({ ok: false, error: result.error ?? "فشل الاستخراج" });
   }
 
   const video = result.videos[0];
+
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return res.json({ ok: true, video, saved: false, message: "Supabase غير مُهيأ — البيانات غير محفوظة" });
+    return res.json({
+      ok: true,
+      video,
+      saved: false,
+      message: "Supabase غير مُهيأ — البيانات غير محفوظة",
+    });
   }
 
   try {
-    // upsert — لو موجود يحدّث
     const r = await sbFetch("/page_videos", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=representation" },
@@ -119,19 +191,25 @@ router.post("/videos/extract-single", async (req, res) => {
         updated_at: new Date().toISOString(),
       }),
     });
+
     if (!r.ok) throw new Error(`Supabase error ${r.status}`);
     const saved = await r.json();
-    return res.json({ ok: true, video: Array.isArray(saved) ? saved[0] : saved, saved: true });
+    return res.json({
+      ok: true,
+      video: Array.isArray(saved) ? saved[0] : saved,
+      saved: true,
+    });
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err) });
   }
 });
 
-/* ─── POST /api/videos/sync ──────────────────────────────────── */
-// مزامنة كاملة لصفحة فيسبوك — بيستخدم SSE لإرسال progress
+/* ═══════════════════════════════════════════════════════════════════
+   POST /api/videos/sync
+   مزامنة كاملة لكل فيديوهات الصفحة — SSE streaming
+═══════════════════════════════════════════════════════════════════ */
 router.post("/videos/sync", async (req, res): Promise<void> => {
   const { page_url } = req.body as { page_url?: string };
-  if (!page_url?.trim()) { res.status(400).json({ ok: false, error: "page_url is required" }); return; }
 
   // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -145,24 +223,30 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
 
   // إنشاء سجل مزامنة
   let logId: string | null = null;
+  const syncTarget = page_url?.trim() ?? "graph-api";
+
   if (SUPABASE_URL && SUPABASE_KEY) {
     try {
       const r = await sbFetch("/video_sync_logs", {
         method: "POST",
-        body: JSON.stringify({ page_url: page_url.trim(), status: "running" }),
+        body: JSON.stringify({ page_url: syncTarget, status: "running" }),
       });
-      const d = await r.json();
+      const d = (await r.json()) as { id?: string } | { id?: string }[];
       logId = (Array.isArray(d) ? d[0] : d)?.id ?? null;
-    } catch { /* نكمل */ }
+    } catch { /* نكمل بدون سجل */ }
   }
 
-  send({ type: "start", message: "بدأت المزامنة..." });
+  send({ type: "start", message: "جاري الاتصال بـ Facebook Graph API..." });
 
-  let added = 0, updated = 0, skipped = 0, errors = 0;
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+  let errors = 0;
   const errorDetails: string[] = [];
 
   try {
-    for await (const event of extractPageVideos(page_url.trim())) {
+    for await (const event of extractPageVideos(syncTarget)) {
+      // حدث خطأ من الـ extractor
       if (event.type === "error") {
         errors++;
         errorDetails.push(event.error);
@@ -170,8 +254,15 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
         continue;
       }
 
+      // حدث progress (pagination)
+      if (event.type === "progress") {
+        send({ type: "progress", fetched: event.fetched, message: event.message });
+        continue;
+      }
+
+      // حدث فيديو
       const video = event.video;
-      send({ type: "progress", message: `جاري معالجة: ${video.title}` });
+      send({ type: "processing", message: `جاري معالجة: ${video.title}` });
 
       if (!SUPABASE_URL || !SUPABASE_KEY) {
         added++;
@@ -180,19 +271,32 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
       }
 
       try {
-        // نتحقق لو الفيديو موجود
-        const checkRes = await sbFetch(`/page_videos?fb_video_id=eq.${encodeURIComponent(video.fb_video_id)}&select=id,title,thumbnail_url`);
-        const existing = await checkRes.json() as { id: string; title: string; thumbnail_url: string }[];
+        // تحقق هل الفيديو موجود
+        const checkRes = await sbFetch(
+          `/page_videos?fb_video_id=eq.${encodeURIComponent(video.fb_video_id)}&select=id,title,thumbnail_url,published_at`
+        );
+        const existing = (await checkRes.json()) as {
+          id: string;
+          title: string;
+          thumbnail_url: string;
+          published_at: string | null;
+        }[];
 
         if (existing.length > 0) {
           const ex = existing[0];
-          const changed = ex.title !== video.title || ex.thumbnail_url !== video.thumbnail_url;
+          const changed =
+            ex.title !== video.title ||
+            ex.thumbnail_url !== video.thumbnail_url ||
+            ex.published_at !== video.published_at;
+
           if (changed) {
             await sbFetch(`/page_videos?id=eq.${ex.id}`, {
               method: "PATCH",
               body: JSON.stringify({
                 title: video.title,
                 thumbnail_url: video.thumbnail_url,
+                published_at: video.published_at,
+                duration_seconds: video.duration_seconds,
                 download_formats: video.download_formats,
                 raw_metadata: video.raw_metadata,
                 updated_at: new Date().toISOString(),
@@ -223,7 +327,9 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
         }
       } catch (dbErr) {
         errors++;
-        const msg = `خطأ حفظ "${video.title}": ${dbErr instanceof Error ? dbErr.message : String(dbErr)}`;
+        const msg = `خطأ في حفظ "${video.title}": ${
+          dbErr instanceof Error ? dbErr.message : String(dbErr)
+        }`;
         errorDetails.push(msg);
         send({ type: "error", message: msg });
       }
@@ -255,15 +361,29 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
   res.end();
 });
 
-/* ─── PATCH /api/videos/:id ──────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   PATCH /api/videos/:id
+   تعديل بيانات فيديو
+═══════════════════════════════════════════════════════════════════ */
 router.patch("/videos/:id", async (req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+
   const { id } = req.params;
-  const { title, thumbnail_url, published_at, duration_seconds, post_url } = req.body as Record<string, unknown>;
+  const { title, thumbnail_url, published_at, duration_seconds, post_url } =
+    req.body as Record<string, unknown>;
+
   try {
     const r = await sbFetch(`/page_videos?id=eq.${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ title, thumbnail_url, published_at, duration_seconds, post_url, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({
+        title,
+        thumbnail_url,
+        published_at,
+        duration_seconds,
+        post_url,
+        updated_at: new Date().toISOString(),
+      }),
     });
     if (!r.ok) throw new Error(`Supabase error ${r.status}`);
     return res.json({ ok: true });
@@ -272,9 +392,14 @@ router.patch("/videos/:id", async (req, res) => {
   }
 });
 
-/* ─── DELETE /api/videos/:id ─────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   DELETE /api/videos/:id
+   حذف فيديو واحد
+═══════════════════════════════════════════════════════════════════ */
 router.delete("/videos/:id", async (req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+
   const { id } = req.params;
   try {
     const r = await sbFetch(`/page_videos?id=eq.${id}`, { method: "DELETE" });
@@ -285,12 +410,20 @@ router.delete("/videos/:id", async (req, res) => {
   }
 });
 
-/* ─── DELETE /api/videos ─────────────────────────────────────── */
-// حذف جميع الفيديوهات
+/* ═══════════════════════════════════════════════════════════════════
+   DELETE /api/videos
+   حذف جميع الفيديوهات
+═══════════════════════════════════════════════════════════════════ */
 router.delete("/videos", async (_req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+  if (!SUPABASE_URL || !SUPABASE_KEY)
+    return res.status(503).json({ ok: false, error: "Supabase غير مُهيأ" });
+
   try {
-    const r = await sbFetch("/page_videos?id=neq.00000000-0000-0000-0000-000000000000", { method: "DELETE" });
+    // Supabase يحتاج filter — نستخدم id != uuid-صفري كطريقة لحذف الكل
+    const r = await sbFetch(
+      "/page_videos?id=neq.00000000-0000-0000-0000-000000000000",
+      { method: "DELETE" }
+    );
     if (!r.ok) throw new Error(`Supabase error ${r.status}`);
     return res.json({ ok: true });
   } catch (err) {
