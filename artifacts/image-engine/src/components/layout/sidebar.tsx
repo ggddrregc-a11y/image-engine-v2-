@@ -44,7 +44,7 @@ function AdBanner300({ collapsed, activeView }: { collapsed: boolean; activeView
 
   return (
     <div className="px-3 pb-2">
-      <div ref={ref} className="flex min-h-[250px] items-center justify-center overflow-hidden rounded-xl border border-border/30" />
+      <div ref={ref} className="overflow-hidden rounded-xl border border-border/30" />
     </div>
   );
 }
