@@ -99,6 +99,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch credit settings from Supabase on mount
   useEffect(() => {
+    // لو الأدمن logged in — مفيش تكلفة عليه
+    try {
+      const raw = sessionStorage.getItem('admin_session_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { isAuthenticated?: boolean };
+        if (parsed?.isAuthenticated) {
+          setGenerateCost(0);
+          setEditCost(0);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
     supabase
       .from('credit_settings')
       .select('*')
