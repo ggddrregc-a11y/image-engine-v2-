@@ -18,6 +18,7 @@ import {
   Megaphone,
   MessageSquare,
   Image as ImageIcon,
+  Film,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminPageContainer } from './shared';
@@ -36,6 +37,7 @@ import { AdminSupportPage } from './pages/support-page';
 import { AdminBannerPage } from './pages/banner-page';
 import { AdminChatProvidersPage } from './pages/chat-providers-page';
 import { AdminImageProvidersPage } from './pages/image-providers-page';
+import { AdminVideoSyncPage } from './pages/video-sync-page';
 
 export type AdminSubPage =
   | 'image-providers'
@@ -49,7 +51,8 @@ export type AdminSubPage =
   | 'image-editor'
   | 'credits'
   | 'support'
-  | 'banner';
+  | 'banner'
+  | 'video-sync';
 
 const SUB_PAGES: {
   id: AdminSubPage;
@@ -59,6 +62,7 @@ const SUB_PAGES: {
 }[] = [
   { id: 'image-providers', label: 'Image Providers', icon: ImageIcon,        description: 'Manage image generation models & API keys' },
   { id: 'chat-providers',  label: 'Chat Providers',  icon: MessageSquare,    description: 'Manage AI chat models & API keys' },
+  { id: 'video-sync',      label: 'Video Sync',      icon: Film,             description: 'مزامنة وإدارة فيديوهات Facebook' },
   { id: 'image-editor',    label: 'Image Editor',    icon: Wand2,            description: 'Enable/disable AI image editing feature' },
   { id: 'credits',         label: 'Credits',         icon: Zap,              description: 'Visitor credits & cost per operation' },
   { id: 'banner',          label: 'Banner',          icon: Megaphone,        description: 'Announcement bar shown at the top of the site' },
@@ -155,6 +159,7 @@ export function AdminView() {
           <AdminPageContainer key={subPage}>
             {subPage === 'image-providers' && <AdminImageProvidersPage />}
             {subPage === 'chat-providers'  && <AdminChatProvidersPage />}
+            {subPage === 'video-sync'      && <AdminVideoSyncPage />}
             {subPage === 'templates'       && <AdminTemplatesPage />}
             {subPage === 'gen-settings'    && <AdminGenerationSettingsPage />}
             {subPage === 'queue'           && <AdminQueuePage />}

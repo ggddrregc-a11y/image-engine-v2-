@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Search, X, Play, Clock, Calendar,
   ChevronLeft, ChevronRight, Film, ExternalLink,
-  Plus, Trash2, Loader2, Link, RefreshCw,
-  CheckCircle2, AlertCircle, Wifi, WifiOff,
-  SkipForward, ArrowDownToLine,
+  Plus, Trash2, Loader2, Link, Wifi, WifiOff,
+  ArrowDownToLine,
 } from 'lucide-react';
 import { PageContainer, PageHeader } from './shared';
 import { cn } from '@/lib/utils';
@@ -17,11 +16,6 @@ interface PageVideo {
   id: string; title: string; thumbnail_url: string;
   published_at: string | null; duration_seconds: number;
   post_url: string; download_formats: VideoFormat[];
-}
-interface SyncEvent {
-  type: 'start' | 'progress' | 'processing' | 'video' | 'error' | 'done';
-  message?: string; fetched?: number; action?: 'added' | 'updated' | 'skipped';
-  title?: string; added?: number; updated?: number; skipped?: number; errors?: number;
 }
 interface Stats {
   total: number;
@@ -58,127 +52,6 @@ const QUALITY_COLORS: Record<string, string> = {
   'audio': 'bg-pink-500/15 text-pink-400 border-pink-500/20',
 };
 
-/* ─── FB Config Banner ───────────────────────────────────────────── */
-function FbConfigBanner() {
-  return (
-    <div className="mb-5 flex items-start gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
-      <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-yellow-500">Facebook غير مُهيأ</p>
-        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-          أضف <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">FACEBOOK_ACCESS_TOKEN</code> و
-          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">FACEBOOK_PAGE_ID</code> في متغيرات البيئة لتفعيل المزامنة التلقائية.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Sync Progress Panel ────────────────────────────────────────── */
-interface SyncState {
-  running: boolean;
-  log: string[];
-  added: number; updated: number; skipped: number; errors: number;
-  done: boolean;
-}
-function SyncPanel({ onDone }: { onDone: () => void }) {
-  const { toast } = useToast();
-  const [state, setState] = useState<SyncState>({
-    running: false, log: [], added: 0, updated: 0, skipped: 0, errors: 0, done: false,
-  });
-  const logRef = useRef<HTMLDivElement>(null);
-
-  async function startSync() {
-    setState({ running: true, log: ['جاري الاتصال...'], added: 0, updated: 0, skipped: 0, errors: 0, done: false });
-    try {
-      const res = await fetch('/api/videos/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page_url: 'graph-api' }),
-      });
-      if (!res.body) throw new Error('No response body');
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
-          try {
-            const ev = JSON.parse(line.slice(5).trim()) as SyncEvent;
-            setState(prev => {
-              const newLog = [...prev.log];
-              if (ev.type === 'video' && ev.title) {
-                const icon = ev.action === 'added' ? '✅' : ev.action === 'updated' ? '🔄' : '⏭️';
-                newLog.push(`${icon} ${ev.title}`);
-              } else if (ev.type === 'error' && ev.message) {
-                newLog.push(`❌ ${ev.message}`);
-              } else if (ev.type === 'progress' && ev.message) {
-                newLog[newLog.length - 1] = `⏳ ${ev.message}`;
-              } else if (ev.type === 'processing' && ev.message) {
-                newLog.push(`⏳ ${ev.message}`);
-              }
-              if (ev.type === 'done') {
-                return { ...prev, running: false, done: true, log: newLog,
-                  added: ev.added ?? 0, updated: ev.updated ?? 0,
-                  skipped: ev.skipped ?? 0, errors: ev.errors ?? 0 };
-              }
-              return { ...prev, log: newLog };
-            });
-          } catch { /* skip malformed */ }
-        }
-      }
-    } catch (err) {
-      setState(prev => ({ ...prev, running: false, done: true, errors: 1,
-        log: [...prev.log, `❌ ${String(err)}`] }));
-    }
-  }
-
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [state.log]);
-
-  useEffect(() => {
-    if (state.done && state.added > 0) {
-      toast({ title: 'اكتملت المزامنة', description: `أُضيف ${state.added} فيديو جديد` });
-      onDone();
-    }
-  }, [state.done, state.added, toast, onDone]);
-
-  return (
-    <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <RefreshCw className={cn('h-4 w-4', state.running && 'animate-spin')} />
-          مزامنة الصفحة كاملة
-        </p>
-        {state.done && (
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1 text-green-500"><CheckCircle2 className="h-3 w-3" />{state.added} جديد</span>
-            <span className="flex items-center gap-1 text-blue-400"><RefreshCw className="h-3 w-3" />{state.updated} محدَّث</span>
-            <span className="flex items-center gap-1"><SkipForward className="h-3 w-3" />{state.skipped} بدون تغيير</span>
-            {state.errors > 0 && <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-3 w-3" />{state.errors} خطأ</span>}
-          </div>
-        )}
-      </div>
-      {state.log.length > 0 && (
-        <div ref={logRef} className="mb-3 max-h-48 overflow-y-auto rounded-xl border border-border bg-background/50 p-3 space-y-1 text-[11px] font-mono text-muted-foreground">
-          {state.log.map((l, i) => <p key={i}>{l}</p>)}
-        </div>
-      )}
-      <button onClick={startSync} disabled={state.running}
-        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-black disabled:opacity-50 hover:opacity-90 transition-opacity">
-        {state.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        {state.running ? 'جاري المزامنة...' : state.done ? 'مزامنة مجدداً' : 'بدء المزامنة'}
-      </button>
-    </div>
-  );
-}
-
 /* ─── Download Modal ─────────────────────────────────────────────── */
 function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => void }) {
   return (
@@ -189,7 +62,6 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
       >
-        {/* Header */}
         <div className="flex items-start gap-3 p-5 border-b border-border">
           {video.thumbnail_url ? (
             <img src={video.thumbnail_url} alt={video.title}
@@ -213,7 +85,6 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
           </button>
         </div>
 
-        {/* Formats */}
         <div className="p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">اختر الجودة</p>
           {video.download_formats.length === 0 ? (
@@ -284,7 +155,7 @@ function AddVideoPanel({ onAdded }: { onAdded: (v: PageVideo) => void }) {
         toast({ title: 'فشل الاستخراج', description: data.error ?? 'تعذّر استخراج الفيديو', variant: 'destructive' });
       }
     } catch (err) {
-      toast({ title: 'خطأ في الاتصال', description: String(err), variant: 'destructive' });
+      toast({ title: 'خطأ', description: String(err), variant: 'destructive' });
     } finally { setLoading(false); }
   }
 
@@ -321,7 +192,6 @@ function VideoCard({ video, onDownload, onDelete }: {
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/50 transition-all hover:border-primary/30 hover:bg-card hover:shadow-lg"
     >
-      {/* Delete */}
       <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         {confirmDel ? (
           <div className="flex items-center gap-1">
@@ -338,7 +208,6 @@ function VideoCard({ video, onDownload, onDelete }: {
         )}
       </div>
 
-      {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-secondary">
         {!imgErr && video.thumbnail_url ? (
           <img src={video.thumbnail_url} alt={video.title}
@@ -368,7 +237,6 @@ function VideoCard({ video, onDownload, onDelete }: {
         )}
       </div>
 
-      {/* Info */}
       <div className="flex flex-1 flex-col p-3.5">
         <p className="line-clamp-2 text-sm font-medium leading-snug">{video.title}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
@@ -444,55 +312,34 @@ export function VideosView() {
     } catch { toast({ title: 'خطأ في الحذف', variant: 'destructive' }); }
   }
 
-  function handleSyncDone() { void load(1, query); void loadStats(); setPage(1); }
-
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const fbConfigured = stats?.fbConfigured ?? true; // افتراض إنه مهيأ لحد ما نعرف
+  const fbConfigured = stats?.fbConfigured ?? true;
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
       <PageContainer>
-        {/* Header */}
         <PageHeader
           title="مركز تحميل الفيديوهات"
-          description={
-            total > 0
-              ? `${total} فيديو متاح للتحميل${stats?.lastSync ? ` · آخر مزامنة: ${new Date(stats.lastSync.started_at).toLocaleDateString('ar')}` : ''}`
-              : 'مزامنة وتحميل فيديوهات صفحتك'
-          }
+          description={total > 0 ? `${total} فيديو متاح للتحميل` : 'مزامنة وتحميل فيديوهات صفحتك'}
           icon={Film}
         />
 
         <div className="mt-5 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-          {/* Facebook Config Banner */}
-          {stats && !fbConfigured && <FbConfigBanner />}
 
-          {/* Connection status chip */}
+          {/* Facebook status chip */}
           {stats && (
             <div className="flex items-center gap-2">
-              <span className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
+              <span className={cn(
+                'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
                 fbConfigured
                   ? 'border-green-500/20 bg-green-500/10 text-green-500'
-                  : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-500')}>
+                  : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-500',
+              )}>
                 {fbConfigured ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                 {fbConfigured ? 'Facebook متصل' : 'Facebook غير مُهيأ'}
               </span>
-              {stats.lastSync && (
-                <span className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs',
-                  stats.lastSync.status === 'completed'
-                    ? 'border-border text-muted-foreground'
-                    : 'border-destructive/20 text-destructive')}>
-                  {stats.lastSync.status === 'completed'
-                    ? <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    : <AlertCircle className="h-3 w-3" />}
-                  آخر مزامنة: {stats.lastSync.status === 'completed' ? `+${stats.lastSync.added_count ?? 0}` : 'فشلت'}
-                </span>
-              )}
             </div>
           )}
-
-          {/* Sync Panel — يظهر فقط لو FB مُهيأ */}
-          {fbConfigured && <SyncPanel onDone={handleSyncDone} />}
 
           {/* Add single video */}
           <AddVideoPanel onAdded={handleAdded} />
@@ -517,7 +364,7 @@ export function VideosView() {
             </button>
           </form>
 
-          {/* Videos Grid */}
+          {/* Grid */}
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -542,9 +389,7 @@ export function VideosView() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {query
                     ? `لم يتم العثور على فيديوهات تطابق "${query}"`
-                    : fbConfigured
-                      ? 'اضغط "بدء المزامنة" لجلب كل فيديوهات صفحتك'
-                      : 'أضف فيديو من خلال الحقل أعلاه أو هيّئ Facebook للمزامنة التلقائية'}
+                    : 'أضف فيديو من خلال الحقل أعلاه، أو استخدم المزامنة من لوحة الأدمن'}
                 </p>
               </div>
               {query && (
@@ -568,7 +413,6 @@ export function VideosView() {
                 </AnimatePresence>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-8 flex items-center justify-center gap-2 pb-6">
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
@@ -586,9 +430,7 @@ export function VideosView() {
                       return (
                         <button key={p} onClick={() => setPage(p)}
                           className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all',
-                            p === page
-                              ? 'bg-primary text-black'
-                              : 'border border-border text-muted-foreground hover:bg-secondary')}>
+                            p === page ? 'bg-primary text-black' : 'border border-border text-muted-foreground hover:bg-secondary')}>
                           {p}
                         </button>
                       );
@@ -605,7 +447,6 @@ export function VideosView() {
         </div>
       </PageContainer>
 
-      {/* Download Modal */}
       <AnimatePresence>
         {selected && <DownloadModal video={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
