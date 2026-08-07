@@ -241,7 +241,32 @@ function MessageBubble({
       )}>
         {isUser
           ? <User className="h-4 w-4 text-black" />
-          : <Bot className="h-4 w-4 text-primary" />
+          : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Outer ring */}
+              <circle cx="12" cy="12" r="10" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.6"/>
+              {/* Brain/AI core */}
+              <circle cx="12" cy="12" r="3.5" fill="hsl(var(--primary))" fillOpacity="0.9"/>
+              {/* Neural lines top */}
+              <line x1="12" y1="8.5" x2="12" y2="5" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+              {/* Neural lines bottom */}
+              <line x1="12" y1="15.5" x2="12" y2="19" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+              {/* Neural lines left */}
+              <line x1="8.5" y1="12" x2="5" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+              {/* Neural lines right */}
+              <line x1="15.5" y1="12" x2="19" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+              {/* Diagonal nodes */}
+              <circle cx="7.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+              <circle cx="16.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+              <circle cx="7.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+              <circle cx="16.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+              {/* Diagonal lines */}
+              <line x1="9.4" y1="9.4" x2="8.2" y2="8.2" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+              <line x1="14.6" y1="9.4" x2="15.8" y2="8.2" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+              <line x1="9.4" y1="14.6" x2="8.2" y2="15.8" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+              <line x1="14.6" y1="14.6" x2="15.8" y2="15.8" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+            </svg>
+          )
         }
       </div>
 
@@ -378,7 +403,7 @@ function ModelSelector({
                         'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border',
                         isActive ? 'border-primary/30 bg-primary/10' : 'border-border bg-secondary',
                       )}>
-                        <img src="/icons/bot.png" alt="" width={14} height={14} className={cn('transition-opacity', isActive ? 'opacity-80' : 'opacity-40 group-hover:opacity-60')} />
+                        <Bot className={cn('h-3.5 w-3.5 transition-opacity', isActive ? 'text-primary opacity-80' : 'text-muted-foreground opacity-40 group-hover:opacity-60')} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn('text-sm font-medium leading-tight', isActive ? 'text-primary' : 'text-foreground')}>
@@ -594,10 +619,25 @@ export function ChatView() {
                 {/* Avatar with bot icon + checked */}
                 <div className="relative">
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-primary/30 bg-primary/10 shadow-lg">
-                    <Bot className="h-10 w-10 text-primary" />
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="10" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeOpacity="0.6"/>
+                      <circle cx="12" cy="12" r="3.5" fill="hsl(var(--primary))" fillOpacity="0.9"/>
+                      <line x1="12" y1="8.5" x2="12" y2="5" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="12" y1="15.5" x2="12" y2="19" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="8.5" y1="12" x2="5" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="15.5" y1="12" x2="19" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <circle cx="7.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="16.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="7.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="16.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <line x1="9.4" y1="9.4" x2="8.2" y2="8.2" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+                      <line x1="14.6" y1="9.4" x2="15.8" y2="8.2" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+                      <line x1="9.4" y1="14.6" x2="8.2" y2="15.8" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+                      <line x1="14.6" y1="14.6" x2="15.8" y2="15.8" stroke="hsl(var(--primary))" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.5"/>
+                    </svg>
                   </div>
                   <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary">
-                    <img src="/icons/checked.png" alt="online" width={12} height={12} className="brightness-0" />
+                    <Check className="h-3 w-3 text-black" />
                   </div>
                 </div>
 
@@ -652,7 +692,18 @@ export function ChatView() {
                   className="flex items-end gap-3"
                 >
                   <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/30">
-                    <Bot className="h-4 w-4 text-primary" />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="10" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.6"/>
+                      <circle cx="12" cy="12" r="3.5" fill="hsl(var(--primary))" fillOpacity="0.9"/>
+                      <line x1="12" y1="8.5" x2="12" y2="5" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="12" y1="15.5" x2="12" y2="19" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="8.5" y1="12" x2="5" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <line x1="15.5" y1="12" x2="19" y2="12" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8"/>
+                      <circle cx="7.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="16.5" cy="7.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="7.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                      <circle cx="16.5" cy="16.5" r="1.2" fill="hsl(var(--primary))" fillOpacity="0.5"/>
+                    </svg>
                   </div>
                   <div className="rounded-2xl rounded-bl-sm border border-border/80 bg-card px-5 py-3.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
