@@ -70,7 +70,7 @@ const DEFAULT_URLS: Record<string, string> = {
 };
 
 const DEFAULT_MODELS: Record<string, string> = {
-  gemini:       'gemini-2.5-flash-image',
+  gemini:       'gemini-3.1-flash-image',
   pollinations: 'flux',
   openai:       'dall-e-3',
   stability:    'stable-diffusion-xl-1024-v1-0',

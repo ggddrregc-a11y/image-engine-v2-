@@ -60,10 +60,10 @@ router.post("/image-providers/fetch-models", async (req, res) => {
   // Gemini — موديلات الصور المعروفة
   if (provider_type === "gemini") {
     const geminiModels: FetchedModel[] = [
-      { id: "gemini-2.5-flash-image", name: "Gemini 2.5 Flash Image / Nano Banana (مجاني)", supported: true, isFree: true },
-      { id: "gemini-3.1-flash-image-preview", name: "Gemini 3.1 Flash Image / Nano Banana 2", supported: true, isFree: false },
-      { id: "gemini-3-pro-image", name: "Gemini 3 Pro Image (مدفوع)", supported: true, isFree: false },
-      { id: "imagen-3.0-generate-002", name: "Imagen 3.0 (يحتاج billing)", supported: true, isFree: false },
+      { id: "gemini-3.1-flash-image",      name: "Gemini 3.1 Flash Image / Nano Banana 2 (موصى به)", supported: true, isFree: true },
+      { id: "gemini-3.1-flash-lite-image", name: "Gemini 3.1 Flash Lite Image / Nano Banana 2 Lite (أسرع)", supported: true, isFree: true },
+      { id: "gemini-2.5-flash-image",      name: "Gemini 2.5 Flash Image / Nano Banana (legacy)", supported: true, isFree: true },
+      { id: "gemini-3-pro-image",          name: "Gemini 3 Pro Image / Nano Banana Pro (مدفوع)", supported: true, isFree: false },
     ];
     return res.json({ ok: true, models: geminiModels });
   }
@@ -196,7 +196,7 @@ router.post("/image-providers/generate", async (req, res) => {
     // ── Google Gemini Image ───────────────────────────────────────
     if (provider_type === "gemini") {
       if (!api_key) return res.status(400).json({ ok: false, error: "API Key required for Gemini" });
-      const modelName = model ?? "gemini-2.5-flash-image";
+      const modelName = model ?? "gemini-3.1-flash-image";
 
       // الـ API الجديد بتاع Nano Banana يستخدم /v1beta/interactions
       const geminiRes = await fetch(
