@@ -57,6 +57,67 @@ const SUGGESTED_PROMPTS = [
   { icon: Zap,      text: 'ساعدني في كتابة وصف احترافي لصورة' },
 ];
 
+/* ── Thinking Block ─────────────────────────────────────────────── */
+function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-2 w-full max-w-[85%] sm:max-w-[78%]">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        {/* Thinking animation */}
+        {isStreaming ? (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
+          </span>
+        ) : (
+          <span className="h-3 w-3 text-primary opacity-60">💭</span>
+        )}
+        <span className="font-medium">{isStreaming ? 'Thinking...' : 'Thinking'}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="ml-auto"
+        >
+          <ChevronDown className="h-3 w-3" />
+        </motion.span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-1 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+              {content}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Extract thinking from content ──────────────────────────────── */
+function extractThinking(content: string): { thinking: string | null; reply: string } {
+  const match = content.match(/^<think>([\s\S]*?)<\/think>\s*/);
+  if (match) {
+    return { thinking: match[1].trim(), reply: content.slice(match[0].length) };
+  }
+  // لو الـ think لسه مش اتقفل (streaming)
+  const openMatch = content.match(/^<think>([\s\S]*)/);
+  if (openMatch) {
+    return { thinking: openMatch[1].trim(), reply: '' };
+  }
+  return { thinking: null, reply: content };
+}
+
 /* ── Code Block ─────────────────────────────────────────────────── */
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [copied, setCopied] = useState(false);
@@ -136,9 +197,10 @@ function TypingMessage({ content }: { content: string }) {
     }, 12);
     return () => clearInterval(iv);
   }, [content]);
+  const { reply } = extractThinking(displayed);
   return (
     <span className="text-sm leading-relaxed break-words">
-      {renderContent(displayed)}
+      {renderContent(reply)}
       {!done && <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse rounded-full bg-primary align-middle" />}
     </span>
   );
@@ -193,19 +255,35 @@ function MessageBubble({
           </div>
         )}
 
-        <div className={cn(
-          'rounded-2xl px-4 py-3 shadow-sm',
-          isUser
-            ? 'rounded-br-sm bg-primary/15 text-foreground ring-1 ring-primary/20'
-            : 'rounded-bl-sm border border-border/80 bg-card text-foreground',
-        )} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-          {isUser
-            ? <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
-            : isLatest
-              ? <TypingMessage content={msg.content} />
-              : <div className="text-sm leading-relaxed break-words">{renderContent(msg.content)}</div>
-          }
-        </div>
+        {/* Thinking block — للـ assistant بس */}
+        {!isUser && (() => {
+          const { thinking, reply } = extractThinking(msg.content);
+          const isStreaming = thinking !== null && !msg.content.includes('</think>');
+          return (
+            <>
+              {thinking !== null && (
+                <ThinkingBlock content={thinking} isStreaming={isStreaming} />
+              )}
+              <div className={cn(
+                'rounded-2xl px-4 py-3 shadow-sm',
+                'rounded-bl-sm border border-border/80 bg-card text-foreground',
+              )} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                {isLatest
+                  ? <TypingMessage content={reply} />
+                  : <div className="text-sm leading-relaxed break-words">{renderContent(reply)}</div>
+                }
+              </div>
+            </>
+          );
+        })()}
+
+        {/* User bubble */}
+        {isUser && (
+          <div className="rounded-2xl rounded-br-sm bg-primary/15 px-4 py-3 shadow-sm ring-1 ring-primary/20"
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+          </div>
+        )}
 
         {/* Meta + actions */}
         <div className={cn('flex items-center gap-1 px-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100', isUser ? 'flex-row-reverse' : 'flex-row')}>
