@@ -47,7 +47,7 @@ const SUGGESTED_PROMPTS = [
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="my-2 overflow-hidden rounded-xl border border-border bg-[#0d1117]">
+    <div className="my-2 w-full max-w-full overflow-hidden rounded-xl border border-border bg-[#0d1117]">
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
         <span className="font-mono text-[11px] text-muted-foreground/70">{lang || 'code'}</span>
         <button
@@ -58,7 +58,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-[#e6edf3]">
+      <pre className="w-full overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-[#e6edf3]" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
         <code>{code}</code>
       </pre>
     </div>
