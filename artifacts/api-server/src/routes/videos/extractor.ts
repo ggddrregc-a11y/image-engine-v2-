@@ -57,28 +57,43 @@ function extractVideoId(url: string): string {
 export async function extractSingleVideo(url: string): Promise<ExtractorResult> {
   try {
     // استيراد المكتبة ديناميكياً
-    const { getFbVideoInfo } = await import("fb-downloader-scrapper") as {
-      getFbVideoInfo: (url: string) => Promise<{
-        title?: string;
-        thumbnail?: string;
-        sd?: string;
-        hd?: string;
-        duration?: number | string;
-      }>;
+    const fbModule = await import("fb-downloader-scrapper") as {
+      default?: (url: string) => Promise<unknown>;
+      getFbVideoInfo?: (url: string) => Promise<unknown>;
+      getVideoInfo?: (url: string) => Promise<unknown>;
     };
 
-    const data = await getFbVideoInfo(url);
+    // نحاول كل الـ exports المحتملة
+    const extractor = fbModule.getFbVideoInfo ?? fbModule.getVideoInfo ?? fbModule.default;
+    if (!extractor) {
+      return { ok: false, error: "مكتبة الاستخراج غير متاحة" };
+    }
 
-    if (!data || (!data.sd && !data.hd)) {
+    const data = await extractor(url) as {
+      title?: string;
+      thumbnail?: string;
+      sd?: string;
+      hd?: string;
+      duration?: number | string;
+      sd_url?: string;
+      hd_url?: string;
+      downloadUrl?: string;
+      downloadHdUrl?: string;
+    };
+
+    const sdUrl = data.sd ?? data.sd_url ?? data.downloadUrl ?? "";
+    const hdUrl = data.hd ?? data.hd_url ?? data.downloadHdUrl ?? "";
+
+    if (!sdUrl && !hdUrl) {
       return { ok: false, error: "لم يتم العثور على روابط تحميل لهذا الفيديو. تأكد إن الفيديو عام وليس خاص." };
     }
 
     const formats: VideoFormat[] = [];
-    if (data.hd) {
-      formats.push({ quality: "HD", format_id: "hd", ext: "mp4", url: data.hd });
+    if (hdUrl) {
+      formats.push({ quality: "HD", format_id: "hd", ext: "mp4", url: hdUrl });
     }
-    if (data.sd) {
-      formats.push({ quality: "SD", format_id: "sd", ext: "mp4", url: data.sd });
+    if (sdUrl) {
+      formats.push({ quality: "SD", format_id: "sd", ext: "mp4", url: sdUrl });
     }
 
     const duration = data.duration ? Number(data.duration) : 0;
