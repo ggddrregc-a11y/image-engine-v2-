@@ -340,7 +340,7 @@ function ModelSelector({
         className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
       >
         <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15">
-          <Bot className="h-2.5 w-2.5 text-primary" />
+          <BrainCircuit className="h-2.5 w-2.5 text-primary" />
         </div>
         <span className="max-w-[140px] truncate">{selected?.name ?? 'اختر نموذج'}</span>
         <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
@@ -378,7 +378,7 @@ function ModelSelector({
                         'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border',
                         isActive ? 'border-primary/30 bg-primary/10' : 'border-border bg-secondary',
                       )}>
-                        <Bot className={cn('h-3.5 w-3.5 transition-opacity', isActive ? 'text-primary opacity-80' : 'text-muted-foreground opacity-40 group-hover:opacity-60')} />
+                        <BrainCircuit className={cn('h-3.5 w-3.5 transition-opacity', isActive ? 'text-primary opacity-80' : 'text-muted-foreground opacity-40 group-hover:opacity-60')} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn('text-sm font-medium leading-tight', isActive ? 'text-primary' : 'text-foreground')}>
