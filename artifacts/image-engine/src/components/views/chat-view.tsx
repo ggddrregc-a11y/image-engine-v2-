@@ -329,9 +329,11 @@ export function ChatView() {
   const [providers, setProviders] = useState<ChatProviderOption[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>('viscodev');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch available providers
@@ -399,7 +401,15 @@ export function ChatView() {
       const data = await res.json() as { ok: boolean; reply?: string; error?: string };
 
       if (!data.ok) {
-        toast({ title: 'تعذّر الاتصال', description: 'الخدمة غير متاحة حالياً، يرجى المحاولة لاحقاً.', variant: 'destructive' });
+        const errMsg = data.error ?? 'الخدمة غير متاحة حالياً';
+        const isVisionError = errMsg.toLowerCase().includes('vision') || errMsg.toLowerCase().includes('image') || errMsg.includes('400');
+        toast({
+          title: 'تعذّر الاتصال',
+          description: isVisionError
+            ? 'هذا النموذج لا يدعم الصور. جرّب نموذج Gemini أو GPT-4o.'
+            : errMsg,
+          variant: 'destructive',
+        });
         setMessages(p => p.filter(m => m.id !== userMsg.id));
         return;
       }
@@ -570,12 +580,21 @@ export function ChatView() {
           <div className="mt-3 shrink-0">
             {/* Hidden file inputs */}
             <input
+              ref={imageInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={e => { handleFiles(e.target.files); setAttachMenuOpen(false); }}
+              onClick={e => { (e.target as HTMLInputElement).value = ''; }}
+            />
+            <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*,application/pdf,.txt,.md,.js,.ts,.tsx,.jsx,.py,.json,.csv,.html,.css,.xml,.yaml,.yml,.doc,.docx"
+              accept="application/pdf,.txt,.md,.js,.ts,.tsx,.jsx,.py,.json,.csv,.html,.css,.xml,.yaml,.yml,.doc,.docx"
               className="hidden"
-              onChange={e => handleFiles(e.target.files)}
+              onChange={e => { handleFiles(e.target.files); setAttachMenuOpen(false); }}
               onClick={e => { (e.target as HTMLInputElement).value = ''; }}
             />
             <input
@@ -584,7 +603,7 @@ export function ChatView() {
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={e => handleFiles(e.target.files)}
+              onChange={e => { handleFiles(e.target.files); setAttachMenuOpen(false); }}
               onClick={e => { (e.target as HTMLInputElement).value = ''; }}
             />
 
@@ -623,24 +642,59 @@ export function ChatView() {
 
               {/* Textarea */}
               <div className="flex items-end gap-2 px-3 pt-3 pb-2">
-                {/* Attach buttons */}
-                <div className="flex items-center gap-1 mb-0.5">
+
+                {/* Attach button + menu */}
+                <div className="relative mb-0.5">
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setAttachMenuOpen(v => !v)}
                     disabled={isLoading}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-                    title="إرفاق ملف أو صورة"
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40',
+                      attachMenuOpen ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                    )}
+                    title="إرفاق"
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
-                    disabled={isLoading}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-                    title="التقاط صورة بالكاميرا"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </button>
+
+                  {/* Dropdown menu */}
+                  <AnimatePresence>
+                    {attachMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setAttachMenuOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                          transition={{ duration: 0.12 }}
+                          className="absolute bottom-full left-0 z-50 mb-2 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+                        >
+                          <button
+                            onClick={() => imageInputRef.current?.click()}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+                          >
+                            <ImageIcon className="h-4 w-4 text-primary shrink-0" />
+                            صورة من المعرض
+                          </button>
+                          <button
+                            onClick={() => cameraInputRef.current?.click()}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+                          >
+                            <Camera className="h-4 w-4 text-primary shrink-0" />
+                            التقاط صورة
+                          </button>
+                          <div className="border-t border-border/50" />
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+                          >
+                            <FileText className="h-4 w-4 text-primary shrink-0" />
+                            ملف (PDF، كود، نص...)
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <textarea
