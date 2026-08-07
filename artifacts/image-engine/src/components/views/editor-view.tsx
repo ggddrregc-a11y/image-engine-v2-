@@ -49,17 +49,19 @@ function StatCard({ icon: Icon, label, value, color, delay }: {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay, ease: 'easeOut' }}
-      className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card/40 p-5 text-center backdrop-blur-sm"
+      transition={{ duration: 0.4, delay, ease: 'easeOut' }}
+      className="flex items-center gap-3 rounded-xl border border-border bg-card/30 px-4 py-2.5 backdrop-blur-sm"
     >
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-        <Icon className="h-5 w-5" />
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${color}`}>
+        <Icon className="h-4 w-4" />
       </div>
-      <p className="text-2xl font-bold tabular-nums">{display}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-lg font-bold tabular-nums leading-none">{display}</p>
+        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p>
+      </div>
     </motion.div>
   );
 }
@@ -371,24 +373,25 @@ export function EditorView() {
       </PageContainer>
 
       {/* Stats Section */}
-      <div className="border-t border-border bg-card/20 py-10">
-        <div className="mx-auto w-full max-w-4xl px-4">
+      <div className="border-t border-border/50 py-5">
+        <div className="mx-auto w-full max-w-3xl px-4">
           <motion.p
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-            className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+            transition={{ duration: 0.4 }}
+            className="mb-3 text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50"
           >
             إحصاءات المنصة
           </motion.p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard icon={Users}    label="إجمالي الزوار"       value={stats.visits}  color="bg-blue-500/15 text-blue-400"   delay={0} />
-            <StatCard icon={Sparkles} label="صورة تم تحريرها"     value={stats.edits}   color="bg-primary/15 text-primary"     delay={0.1} />
-            <StatCard icon={Film}     label="فيديو في المكتبة"    value={stats.videos}  color="bg-purple-500/15 text-purple-400" delay={0.2} />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <StatCard icon={Users}    label="إجمالي الزوار"      value={stats.visits}  color="bg-blue-500/10 text-blue-400"     delay={0} />
+            <StatCard icon={Sparkles} label="صورة تم تحريرها"    value={stats.edits}   color="bg-primary/10 text-primary"       delay={0.08} />
+            <StatCard icon={Film}     label="فيديو في المكتبة"   value={stats.videos}  color="bg-purple-500/10 text-purple-400" delay={0.16} />
             <StatCard
               icon={Clock}
-              label="آخر تحديث للمكتبة"
+              label="آخر تحديث"
               value={stats.lastUpdate ? new Date(stats.lastUpdate).toLocaleDateString('ar', { month: 'short', day: 'numeric' }) : '—'}
-              color="bg-green-500/15 text-green-400"
-              delay={0.3}
+              color="bg-green-500/10 text-green-400"
+              delay={0.24}
             />
           </div>
         </div>
