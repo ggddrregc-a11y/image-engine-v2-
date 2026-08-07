@@ -106,12 +106,14 @@ function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming?
 
 /* ── Extract thinking from content ──────────────────────────────── */
 function extractThinking(content: string): { thinking: string | null; reply: string } {
-  const match = content.match(/^<think>([\s\S]*?)<\/think>\s*/);
-  if (match) {
-    return { thinking: match[1].trim(), reply: content.slice(match[0].length) };
+  // مسح المسافات في البداية
+  const trimmed = content.trimStart();
+  const closedMatch = trimmed.match(/^<think>([\s\S]*?)<\/think>\s*/i);
+  if (closedMatch) {
+    return { thinking: closedMatch[1].trim(), reply: trimmed.slice(closedMatch[0].length) };
   }
-  // لو الـ think لسه مش اتقفل (streaming)
-  const openMatch = content.match(/^<think>([\s\S]*)/);
+  // لو الـ think لسه مش اتقفل (streaming في المنتصف)
+  const openMatch = trimmed.match(/^<think>([\s\S]*)/i);
   if (openMatch) {
     return { thinking: openMatch[1].trim(), reply: '' };
   }
