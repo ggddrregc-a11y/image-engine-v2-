@@ -104,6 +104,15 @@ export function AdminChatProvidersPage() {
     fetchProviders();
   };
 
+  const handleSaveMulti = async (providers: Partial<ChatProvider>[]) => {
+    for (const p of providers) {
+      await supabase.from('chat_providers').insert(p);
+    }
+    setShowForm(false);
+    setEditing(null);
+    fetchProviders();
+  };
+
   const handleDelete = async (id: string) => {
     await supabase.from('chat_providers').delete().eq('id', id);
     fetchProviders();
@@ -156,6 +165,7 @@ export function AdminChatProvidersPage() {
                 key="form"
                 provider={editing}
                 onSave={handleSave}
+                onSaveMulti={handleSaveMulti}
                 onCancel={() => { setShowForm(false); setEditing(null); }}
               />
             )}
@@ -228,10 +238,12 @@ export function AdminChatProvidersPage() {
 function ChatProviderForm({
   provider,
   onSave,
+  onSaveMulti,
   onCancel,
 }: {
   provider: ChatProvider | null;
   onSave: (p: Partial<ChatProvider>) => void;
+  onSaveMulti: (providers: Partial<ChatProvider>[]) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(provider?.name ?? '');
@@ -239,6 +251,7 @@ function ChatProviderForm({
   const [baseUrl, setBaseUrl] = useState(provider?.base_url ?? DEFAULT_URLS['openai']);
   const [apiKey, setApiKey] = useState(provider?.api_key ?? '');
   const [modelName, setModelName] = useState(provider?.model_name ?? DEFAULT_MODELS['openai']);
+  const [selectedModels, setSelectedModels] = useState<string[]>(provider?.model_name ? [provider.model_name] : []);
   const [enabled, setEnabled] = useState(provider?.enabled ?? true);
   const [isDefault, setIsDefault] = useState(provider?.is_default ?? false);
   const [notes, setNotes] = useState(provider?.notes ?? '');
@@ -254,9 +267,18 @@ function ChatProviderForm({
   const handleTypeChange = (v: string) => {
     setProviderType(v);
     if (DEFAULT_URLS[v]) setBaseUrl(DEFAULT_URLS[v]);
-    if (DEFAULT_MODELS[v]) setModelName(DEFAULT_MODELS[v]);
+    if (DEFAULT_MODELS[v]) {
+      setModelName(DEFAULT_MODELS[v]);
+      setSelectedModels([DEFAULT_MODELS[v]]);
+    }
     setFetchedModels([]);
     setFetchError('');
+  };
+
+  const toggleModelSelection = (modelId: string) => {
+    setSelectedModels(prev =>
+      prev.includes(modelId) ? prev.filter(m => m !== modelId) : [...prev, modelId]
+    );
   };
 
   const handleFetchModels = async () => {
@@ -370,6 +392,9 @@ function ChatProviderForm({
                       <span>{fetchedModels.length} نموذج</span>
                       <span className="text-primary font-medium">{supportedCount} مدعوم للشات</span>
                       {freeCount > 0 && <span className="text-emerald-500 font-medium">{freeCount} مجاني</span>}
+                      {selectedModels.length > 0 && (
+                        <span className="font-semibold text-primary">{selectedModels.length} محدد</span>
+                      )}
                     </div>
                     <button onClick={() => setShowModelPicker(false)} className="text-muted-foreground hover:text-foreground">
                       <X className="h-3.5 w-3.5" />
@@ -394,14 +419,14 @@ function ChatProviderForm({
                       filteredModels.map(m => (
                         <button
                           key={m.id}
-                          onClick={() => { if (m.supported) { setModelName(m.id); setShowModelPicker(false); setModelSearch(''); } }}
+                          onClick={() => { if (m.supported) { toggleModelSelection(m.id); setModelName(m.id); setModelSearch(''); } }}
                           disabled={!m.supported}
                           className={cn(
                             'flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors',
                             m.supported
                               ? 'hover:bg-secondary cursor-pointer'
                               : 'opacity-50 cursor-not-allowed',
-                            modelName === m.id && 'bg-primary/10',
+                            selectedModels.includes(m.id) && 'bg-primary/10',
                           )}
                         >
                           {/* Icon */}
@@ -432,7 +457,7 @@ function ChatProviderForm({
                             )}
                           </div>
 
-                          {modelName === m.id && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                          {selectedModels.includes(m.id) && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
                         </button>
                       ))
                     )}
@@ -459,11 +484,27 @@ function ChatProviderForm({
           <AdminButton
             variant="primary"
             size="sm"
-            onClick={() => onSave({ name, provider_type: providerType, base_url: baseUrl, api_key: apiKey, model_name: modelName, enabled, is_default: isDefault, notes })}
-            disabled={!name.trim() || !modelName.trim()}
+            onClick={() => {
+              const modelsToSave = selectedModels.length > 0 ? selectedModels : [modelName];
+              if (modelsToSave.length === 1) {
+                onSave({ name, provider_type: providerType, base_url: baseUrl, api_key: apiKey, model_name: modelsToSave[0], enabled, is_default: isDefault, notes });
+              } else {
+                onSaveMulti(modelsToSave.map((m, i) => ({
+                  name: `${name} (${m})`,
+                  provider_type: providerType,
+                  base_url: baseUrl,
+                  api_key: apiKey,
+                  model_name: m,
+                  enabled,
+                  is_default: isDefault && i === 0,
+                  notes,
+                })));
+              }
+            }}
+            disabled={!name.trim() || (selectedModels.length === 0 && !modelName.trim())}
           >
             <Check className="h-4 w-4" />
-            {provider ? 'Save Changes' : 'Add Provider'}
+            {provider ? 'Save Changes' : selectedModels.length > 1 ? `Add ${selectedModels.length} Providers` : 'Add Provider'}
           </AdminButton>
         </div>
       </AdminCard>
