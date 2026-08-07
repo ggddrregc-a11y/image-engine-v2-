@@ -129,9 +129,9 @@ router.post("/videos/extract-single", async (req, res) => {
 
 /* ─── POST /api/videos/sync ──────────────────────────────────── */
 // مزامنة كاملة لصفحة فيسبوك — بيستخدم SSE لإرسال progress
-router.post("/videos/sync", async (req, res) => {
+router.post("/videos/sync", async (req, res): Promise<void> => {
   const { page_url } = req.body as { page_url?: string };
-  if (!page_url?.trim()) return res.status(400).json({ ok: false, error: "page_url is required" });
+  if (!page_url?.trim()) { res.status(400).json({ ok: false, error: "page_url is required" }); return; }
 
   // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
