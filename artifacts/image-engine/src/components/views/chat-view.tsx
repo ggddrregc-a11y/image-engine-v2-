@@ -77,13 +77,30 @@ function renderContent(content: string) {
     return (
       <span key={i}>
         {part.split('\n').map((line, li, arr) => {
-          const formatted = line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((seg, si) => {
+          // Headings
+          if (/^### (.+)/.test(line))
+            return <p key={li} className="mt-3 mb-1 text-base font-bold text-foreground">{line.replace(/^### /, '')}</p>;
+          if (/^## (.+)/.test(line))
+            return <p key={li} className="mt-3 mb-1 text-lg font-bold text-foreground">{line.replace(/^## /, '')}</p>;
+          if (/^# (.+)/.test(line))
+            return <p key={li} className="mt-3 mb-1 text-xl font-bold text-foreground">{line.replace(/^# /, '')}</p>;
+          // Horizontal rule
+          if (/^---+$/.test(line.trim()))
+            return <hr key={li} className="my-2 border-border" />;
+          // Bullet list
+          const isBullet = /^[-*] (.+)/.test(line);
+          const lineContent = isBullet ? line.replace(/^[-*] /, '') : line;
+          const formatted = lineContent.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g).map((seg, si) => {
             if (seg.startsWith('**') && seg.endsWith('**'))
               return <strong key={si} className="font-semibold text-foreground">{seg.slice(2, -2)}</strong>;
+            if (seg.startsWith('*') && seg.endsWith('*') && seg.length > 2)
+              return <em key={si} className="italic text-foreground/80">{seg.slice(1, -1)}</em>;
             if (seg.startsWith('`') && seg.endsWith('`'))
               return <code key={si} className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[12px] text-primary">{seg.slice(1, -1)}</code>;
             return <span key={si}>{seg}</span>;
           });
+          if (isBullet)
+            return <p key={li} className="flex gap-2 leading-relaxed"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" /><span>{formatted}</span></p>;
           return <span key={li}>{formatted}{li < arr.length - 1 && <br />}</span>;
         })}
       </span>
