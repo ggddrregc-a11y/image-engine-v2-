@@ -362,6 +362,83 @@ router.post("/videos/sync", async (req, res): Promise<void> => {
 });
 
 /* ═══════════════════════════════════════════════════════════════════
+   GET /api/videos/download
+   Proxy تحميل الفيديو بالاسم الصحيح (يتجاوز قيود cross-origin filename)
+   Query params: url (رابط التحميل), filename (اسم الملف)
+═══════════════════════════════════════════════════════════════════ */
+router.get("/videos/download", async (req, res): Promise<void> => {
+  const { url, filename } = req.query as { url?: string; filename?: string };
+
+  if (!url?.trim()) {
+    res.status(400).json({ ok: false, error: "url is required" });
+    return;
+  }
+
+  // تحقق بسيط — الرابط لازم يكون من فيسبوك أو CDN بتاعه
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    res.status(400).json({ ok: false, error: "Invalid URL" });
+    return;
+  }
+
+  const allowedHosts = ["facebook.com", "fbcdn.net", "fb.com", "cdninstagram.com"];
+  const isAllowed = allowedHosts.some(h => parsedUrl.hostname.endsWith(h));
+  if (!isAllowed) {
+    res.status(403).json({ ok: false, error: "URL غير مسموح به" });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.facebook.com/",
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!upstream.ok) {
+      res.status(502).json({ ok: false, error: `Upstream error ${upstream.status}` });
+      return;
+    }
+
+    // اسم الملف — ننظفه من الأحرف الغريبة
+    const rawName = (filename ?? "video").trim();
+    const safeName = rawName
+      .replace(/[^\u0600-\u06FF\w\s\-_.]/g, "")  // احتفظ بالعربي والإنجليزي
+      .replace(/\s+/g, "_")
+      .slice(0, 100) || "video";
+    const finalName = `${safeName}.mp4`;
+
+    const contentType = upstream.headers.get("content-type") ?? "video/mp4";
+    const contentLength = upstream.headers.get("content-length");
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(finalName)}`);
+    if (contentLength) res.setHeader("Content-Length", contentLength);
+    res.setHeader("Cache-Control", "no-store");
+
+    // stream مباشر بدون تحميل في الذاكرة
+    const reader = upstream.body?.getReader();
+    if (!reader) { res.status(502).end(); return; }
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!res.writable) break;
+      res.write(value);
+    }
+    res.end();
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
    PATCH /api/videos/:id
    تعديل بيانات فيديو
 ═══════════════════════════════════════════════════════════════════ */

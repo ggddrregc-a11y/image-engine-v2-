@@ -52,6 +52,11 @@ const QUALITY_COLORS: Record<string, string> = {
   'audio': 'bg-pink-500/15 text-pink-400 border-pink-500/20',
 };
 
+function buildDownloadUrl(videoUrl: string, title: string) {
+  const params = new URLSearchParams({ url: videoUrl, filename: title });
+  return `/api/videos/download?${params.toString()}`;
+}
+
 /* ─── Download Modal ─────────────────────────────────────────────── */
 function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => void }) {
   return (
@@ -98,8 +103,9 @@ function DownloadModal({ video, onClose }: { video: PageVideo; onClose: () => vo
             </div>
           ) : (
             video.download_formats.map(fmt => (
-              <a key={fmt.quality} href={fmt.url} download={`${video.title}.${fmt.ext}`}
-                target="_blank" rel="noopener noreferrer"
+              <a key={fmt.quality}
+                href={buildDownloadUrl(fmt.url, video.title)}
+                download={`${video.title}.mp4`}
                 className="group flex items-center gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm">
                 <span className={cn('shrink-0 rounded-lg border px-2.5 py-1 text-xs font-bold',
                   QUALITY_COLORS[fmt.quality] ?? 'bg-secondary text-foreground border-border')}>
