@@ -213,7 +213,16 @@ router.post("/image-providers/generate", async (req, res) => {
       if (!geminiRes.ok) {
         const errText = await geminiRes.text();
         logger.error({ status: geminiRes.status, body: errText }, "[image-gen] Gemini error");
-        return res.status(502).json({ ok: false, error: `Gemini error: ${geminiRes.status}` });
+        // رجّع الرسالة الكاملة من Google للـ client
+        let errMsg = `Gemini HTTP ${geminiRes.status}`;
+        try {
+          const errJson = JSON.parse(errText);
+          const googleMsg = errJson?.error?.message ?? errJson?.message ?? errText;
+          errMsg = `Gemini ${geminiRes.status}: ${googleMsg}`;
+        } catch {
+          errMsg = `Gemini ${geminiRes.status}: ${errText}`;
+        }
+        return res.status(502).json({ ok: false, error: errMsg });
       }
 
       const geminiData = await geminiRes.json() as {
@@ -222,7 +231,10 @@ router.post("/image-providers/generate", async (req, res) => {
 
       const imagePart = geminiData.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
       if (!imagePart?.inlineData) {
-        return res.status(502).json({ ok: false, error: "Gemini did not return an image" });
+        // ممكن Gemini رجّع نص بدل صورة — نرجع تفاصيل
+        const textPart = geminiData.candidates?.[0]?.content?.parts?.find((p: Record<string, unknown>) => p["text"]);
+        const detail = textPart ? String((textPart as Record<string, unknown>)["text"]) : JSON.stringify(geminiData);
+        return res.status(502).json({ ok: false, error: `Gemini لم يرجع صورة. تفاصيل: ${detail.slice(0, 300)}` });
       }
 
       const { mimeType, data } = imagePart.inlineData;
