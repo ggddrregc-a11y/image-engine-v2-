@@ -11,6 +11,8 @@ import {
   ChevronLeft,
   Wand2,
   MessageSquare,
+  Film,
+  Video,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './logo';
@@ -32,7 +34,9 @@ const NAV_ITEMS: {
   { id: 'history', labelKey: 'sidebar.history', icon: History },
   { id: 'collections', labelKey: 'sidebar.collections', icon: FolderOpen },
   { id: 'chat', labelKey: 'sidebar.chat', icon: MessageSquare },
+  { id: 'videos', labelKey: 'sidebar.videos', icon: Film },
   { id: 'api', labelKey: 'sidebar.api', icon: Code2 },
+  { id: 'videos-admin', labelKey: 'sidebar.videosAdmin', icon: Video, badge: 'Admin' },
   { id: 'admin', labelKey: 'sidebar.admin', icon: Shield, badge: 'Admin' },
 ];
 

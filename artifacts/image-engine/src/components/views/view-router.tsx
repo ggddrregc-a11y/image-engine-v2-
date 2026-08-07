@@ -12,6 +12,8 @@ import { ApiView } from './api-view';
 import { SettingsView } from './settings-view';
 import { AdminView } from './admin/admin-view';
 import { ChatView } from './chat-view';
+import { VideosView } from './videos-view';
+import { VideosAdminView } from './videos-admin-view';
 import type { ViewId } from '@/lib/types';
 
 const VIEWS: Record<ViewId, React.ComponentType> = {
@@ -26,6 +28,8 @@ const VIEWS: Record<ViewId, React.ComponentType> = {
   chat: ChatView,
   settings: SettingsView,
   admin: AdminView,
+  videos: VideosView,
+  'videos-admin': VideosAdminView,
 };
 
 export function ViewRouter() {

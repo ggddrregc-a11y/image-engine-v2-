@@ -68,6 +68,8 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'sidebar.admin': 'Admin',
     'sidebar.collapse': 'Collapse',
     'sidebar.editor': 'Editor',
+    'sidebar.videos': 'Videos',
+    'sidebar.videosAdmin': 'Videos Admin',
   },
   ar: {
     'workspace.personal': 'شخصي',
@@ -136,6 +138,8 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'sidebar.admin': 'الإدمن',
     'sidebar.collapse': 'طي',
     'sidebar.editor': 'المحرر',
+    'sidebar.videos': 'مركز الفيديوهات',
+    'sidebar.videosAdmin': 'إدارة الفيديوهات',
   },
 };
 

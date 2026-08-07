@@ -5,6 +5,7 @@ import comfyRouter from "./comfy";
 import editorRouter from "./editor";
 import chatRouter from "./chat";
 import imageProvidersRouter from "./image-providers";
+import videosRouter from "./videos/index.js";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(comfyRouter);
 router.use(editorRouter);
 router.use(chatRouter);
 router.use(imageProvidersRouter);
+router.use(videosRouter);
 
 export default router;
