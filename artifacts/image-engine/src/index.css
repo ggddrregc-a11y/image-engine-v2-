@@ -414,6 +414,17 @@
     animation: shimmer-slow 3s ease-in-out infinite;
   }
 
+  /* shimmer بطيء للبنر — 4 ثواني */
+  @keyframes shimmer-slow-banner {
+    0%   { transform: translateX(-100%) skewX(-8deg); opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateX(200%) skewX(-8deg); opacity: 0; }
+  }
+  .animate-shimmer-slow-banner {
+    animation: shimmer-slow-banner 4s ease-in-out infinite;
+  }
+
   /* staggered delay helpers */
   .delay-75  { animation-delay: 75ms; }
   .delay-150 { animation-delay: 150ms; }

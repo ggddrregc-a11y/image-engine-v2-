@@ -71,7 +71,9 @@ export function AnnouncementBar() {
           transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
           className="overflow-hidden"
         >
-          <div className={cn('relative bg-gradient-to-r border-b border-white/5 backdrop-blur-sm', colors.bar)}>
+          <div className={cn('relative overflow-hidden bg-gradient-to-r border-b border-white/5 backdrop-blur-sm', colors.bar)}>
+            {/* Shimmer effect */}
+            <span className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer-slow-banner bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-2 sm:px-6">
 
               {/* Left spacer (mirrors close button) */}
