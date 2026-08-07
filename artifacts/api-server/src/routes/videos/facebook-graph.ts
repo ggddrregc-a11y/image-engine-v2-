@@ -114,10 +114,14 @@ function normalizeVideo(raw: RawFbVideo, pageId: string): FbVideo {
     if (native?.picture) thumbnail = native.picture;
   }
 
-  // رابط المنشور
-  const postUrl = raw.permalink_url
-    ? raw.permalink_url
-    : `https://www.facebook.com/${pageId}/videos/${raw.id}`;
+  // رابط المنشور — نتأكد إنه absolute URL
+  let postUrl = raw.permalink_url ?? "";
+  if (postUrl && !postUrl.startsWith("http")) {
+    postUrl = `https://www.facebook.com${postUrl.startsWith("/") ? "" : "/"}${postUrl}`;
+  }
+  if (!postUrl) {
+    postUrl = `https://www.facebook.com/${pageId}/videos/${raw.id}`;
+  }
 
   return {
     fb_video_id: raw.id,

@@ -254,7 +254,8 @@ function VideoCard({ video, onDownload, onDelete }: {
           )}
         </div>
         <button onClick={() => onDownload(video)}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-black">
+          className="mt-3 relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-black">
+          <span className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer-slow bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
           <ArrowDownToLine className="h-3.5 w-3.5" />تحميل
         </button>
       </div>
