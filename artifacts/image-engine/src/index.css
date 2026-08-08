@@ -446,7 +446,6 @@
 .ad-responsive iframe {
   display: block;
   width: 100% !important;
-  height: auto !important;
   max-width: 100%;
   border: 0;
 }
@@ -454,16 +453,13 @@
 .ad-300 iframe { max-width: 300px !important; }
 .ad-responsive { display:flex; align-items:center; justify-content:center; }
 
-/* Prevent ad containers from expanding the footer excessively */
+/* Prevent extra footer spacing: keep ad height natural and remove container padding */
 .ad-slot { padding: 0; margin: 0; }
-.ad-728 { max-height: 90px; overflow: hidden; }
-.ad-300 { max-height: 250px; overflow: hidden; }
-.ad-responsive { width: 100%; }
+.ad-728, .ad-300 { overflow: visible; }
+.footer-has-ad .px-4.py-3 { padding-top: 8px; }
 
-/* Mobile: hide sidebar-sized ads and constrain banner height */
+/* Mobile: hide sidebar-sized ads to avoid sidebar space issues */
 @media (max-width: 640px) {
   .ad-300 { display: none !important; }
-  .ad-728 { max-height: 110px !important; }
-  .ad-responsive iframe { width: 100% !important; height: auto !important; }
 }
 
