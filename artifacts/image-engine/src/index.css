@@ -454,3 +454,16 @@
 .ad-300 iframe { max-width: 300px !important; }
 .ad-responsive { display:flex; align-items:center; justify-content:center; }
 
+/* Prevent ad containers from expanding the footer excessively */
+.ad-slot { padding: 0; margin: 0; }
+.ad-728 { max-height: 90px; overflow: hidden; }
+.ad-300 { max-height: 250px; overflow: hidden; }
+.ad-responsive { width: 100%; }
+
+/* Mobile: hide sidebar-sized ads and constrain banner height */
+@media (max-width: 640px) {
+  .ad-300 { display: none !important; }
+  .ad-728 { max-height: 110px !important; }
+  .ad-responsive iframe { width: 100% !important; height: auto !important; }
+}
+

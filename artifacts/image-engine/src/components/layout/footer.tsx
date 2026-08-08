@@ -29,9 +29,13 @@ export function Footer() {
   const isAdmin = activeView === 'admin';
 
   return (
-    <footer className="animate-fade-in border-t border-border/50 bg-background/50 backdrop-blur-sm">
+    <footer className={`animate-fade-in border-t border-border/50 bg-background/50 backdrop-blur-sm ${!isAdmin ? 'footer-has-ad' : ''}`}>
       {/* إعلان 728x90 — مخفي في الأدمن */}
-      {!isAdmin && <AdBanner728 />}
+      {!isAdmin && (
+        <div className="ad-slot">
+          <AdBanner728 />
+        </div>
+      )}
 
       <div className="px-4 py-3">
         <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-between gap-2 sm:flex-row">
