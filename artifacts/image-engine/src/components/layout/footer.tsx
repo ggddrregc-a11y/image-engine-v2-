@@ -14,6 +14,7 @@ function AdBanner728() {
     const s2 = document.createElement('script');
     s2.src = 'https://www.highperformanceformat.com/449140387cd4430b4584358a23c87848/invoke.js';
     s2.async = true;
+    s2.setAttribute('data-cfasync', 'false');
 
     ref.current.appendChild(s1);
     ref.current.appendChild(s2);

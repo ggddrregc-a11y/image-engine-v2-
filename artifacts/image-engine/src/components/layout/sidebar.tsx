@@ -35,6 +35,7 @@ function AdBanner300({ collapsed, activeView }: { collapsed: boolean; activeView
     const s2 = document.createElement('script');
     s2.src = 'https://www.highperformanceformat.com/1d999c815155d29961fe491bca4e770a/invoke.js';
     s2.async = true;
+    s2.setAttribute('data-cfasync', 'false');
 
     ref.current.appendChild(s1);
     ref.current.appendChild(s2);
