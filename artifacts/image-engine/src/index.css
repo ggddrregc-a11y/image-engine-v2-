@@ -441,3 +441,16 @@
     transform: scale(0.98);
   }
 }
+
+/* Responsive ad helpers */
+.ad-responsive iframe {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  border: 0;
+}
+.ad-728 iframe { max-width: 728px !important; }
+.ad-300 iframe { max-width: 300px !important; }
+.ad-responsive { display:flex; align-items:center; justify-content:center; }
+

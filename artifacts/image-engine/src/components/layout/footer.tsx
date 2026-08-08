@@ -20,7 +20,7 @@ function AdBanner728() {
     ref.current.appendChild(s2);
   }, []);
 
-  return <div ref={ref} className="flex items-center justify-center overflow-hidden" />;
+  return <div ref={ref} className="flex items-center justify-center overflow-hidden ad-responsive ad-728" />;
 }
 
 export function Footer() {
